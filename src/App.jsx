@@ -23,6 +23,12 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      {/* Guest-accessible routes (feed + leaderboard) */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<Feed />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
+      </Route>
+      {/* Protected routes */}
       <Route
         element={
           <ProtectedRoute>
@@ -30,11 +36,9 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Feed />} />
         <Route path="/survey/:id" element={<SurveyViewer />} />
         <Route path="/survey/:id/results" element={<SurveyResults />} />
         <Route path="/create" element={<CreateSurvey />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/wallet" element={<Wallet />} />
         <Route path="/rewards" element={<Rewards />} />
         <Route path="/profile" element={<Profile />} />

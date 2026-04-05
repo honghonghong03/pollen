@@ -1,6 +1,6 @@
 import { Clock, MessageSquare, Calendar } from 'lucide-react';
 import { creditRewardTier, formatCredits } from '../lib/credits';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 function timeAgo(dateStr) {
@@ -16,6 +16,8 @@ function timeAgo(dateStr) {
 export default function SurveyCard({ survey }) {
   const navigate = useNavigate();
   const { user, hasCompletedSurvey } = useAuth();
+  const outletContext = useOutletContext() || {};
+  const showSignupPrompt = outletContext.showSignupPrompt;
   const credits = survey.estimated_minutes;
   const tier = creditRewardTier(credits);
   const progress = (survey.responses_collected / survey.responses_needed) * 100;
@@ -79,7 +81,10 @@ export default function SurveyCard({ survey }) {
           </div>
         </div>
         <button
-          onClick={() => isOwn ? navigate(`/survey/${survey.id}/results`) : navigate(`/survey/${survey.id}`)}
+          onClick={() => {
+            if (!user && showSignupPrompt) return showSignupPrompt();
+            isOwn ? navigate(`/survey/${survey.id}/results`) : navigate(`/survey/${survey.id}`);
+          }}
           disabled={isFull && !isOwn || isDone}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             isDone
