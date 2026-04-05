@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(export PATH=\"/usr/local/bin:$PATH\")",
+      "Read(//private/tmp/**)",
+      "Bash(rm -rf pollen-init)",
+      "Bash(cp -r /tmp/pollen-init/* /tmp/pollen-init/.* /Users/wjhon/Pollen.re/)",
+      "Bash(npm install:*)",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(git init:*)"
+    ]
+  }
+}
