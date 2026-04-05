@@ -1,19 +1,6 @@
-import { useNavigate } from 'react-router-dom';
 import { X, Gift, Trophy, TrendingUp } from 'lucide-react';
 
 export default function SignupPrompt({ onClose }) {
-  const navigate = useNavigate();
-
-  const handleSignup = () => {
-    onClose();
-    setTimeout(() => navigate('/signup'), 0);
-  };
-
-  const handleLogin = () => {
-    onClose();
-    setTimeout(() => navigate('/login'), 0);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-0 sm:pb-4" onClick={onClose}>
       <div className="bg-white rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full shadow-xl relative" onClick={(e) => e.stopPropagation()}>
@@ -48,18 +35,18 @@ export default function SignupPrompt({ onClose }) {
           ))}
         </div>
 
-        <button
-          onClick={handleSignup}
-          className="w-full bg-honey text-white font-semibold py-3 rounded-lg hover:bg-honey-light transition-colors mb-2"
+        <a
+          href="/signup"
+          className="block w-full bg-honey text-white font-semibold py-3 rounded-lg hover:bg-honey-light transition-colors mb-2 text-center"
         >
           Sign up free
-        </button>
-        <button
-          onClick={handleLogin}
-          className="w-full text-sm text-gray-400 hover:text-soil py-2"
+        </a>
+        <a
+          href="/login"
+          className="block w-full text-sm text-gray-400 hover:text-soil py-2 text-center"
         >
           Already have an account? <span className="text-stem font-medium">Log in</span>
-        </button>
+        </a>
       </div>
     </div>
   );

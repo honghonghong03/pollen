@@ -55,12 +55,12 @@ export default function Layout() {
               <CreditPill amount={user.credit_balance} />
             </div>
           ) : (
-            <button
-              onClick={() => navigate('/signup')}
-              className="bg-honey text-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-honey-light transition-colors"
+            <a
+              href="/signup"
+              className="bg-honey text-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-honey-light transition-colors inline-block"
             >
               Sign up
-            </button>
+            </a>
           )}
         </div>
       </header>
