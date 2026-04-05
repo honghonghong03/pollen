@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { getLevel } from '../lib/gamification';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Feed', guest: true },
+  { to: '/feed', icon: Home, label: 'Feed', guest: true },
   { to: '/create', icon: PlusCircle, label: 'Create', guest: false },
   { to: '/leaderboard', icon: Trophy, label: 'Ranks', guest: true },
   { to: '/wallet', icon: Wallet, label: 'Wallet', guest: false },

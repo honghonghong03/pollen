@@ -11,6 +11,7 @@ import Signup from './pages/Signup';
 import SurveyResults from './pages/SurveyResults';
 import Leaderboard from './pages/Leaderboard';
 import Rewards from './pages/Rewards';
+import Landing from './pages/Landing';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -18,14 +19,22 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function HomeRoute() {
+  const { user } = useAuth();
+  if (!user) return <Landing />;
+  return <Navigate to="/feed" replace />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      {/* Landing page for guests, redirect to feed for logged-in */}
+      <Route path="/" element={<HomeRoute />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       {/* Guest-accessible routes (feed + leaderboard) */}
       <Route element={<Layout />}>
-        <Route path="/" element={<Feed />} />
+        <Route path="/feed" element={<Feed />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
       </Route>
       {/* Protected routes */}
