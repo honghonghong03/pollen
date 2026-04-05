@@ -1,18 +1,21 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Home, PlusCircle, Wallet, User } from 'lucide-react';
+import { Home, PlusCircle, Trophy, Wallet, User } from 'lucide-react';
 import CreditPill from './CreditPill';
 import { useAuth } from '../context/AuthContext';
+import { getLevel } from '../lib/gamification';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Feed' },
   { to: '/create', icon: PlusCircle, label: 'Create' },
+  { to: '/leaderboard', icon: Trophy, label: 'Ranks' },
   { to: '/wallet', icon: Wallet, label: 'Wallet' },
   { to: '/profile', icon: User, label: 'Profile' },
 ];
 
 export default function Layout() {
-  const { user } = useAuth();
+  const { user, totalEarned } = useAuth();
   const navigate = useNavigate();
+  const level = getLevel(totalEarned);
 
   return (
     <div className="flex flex-col min-h-dvh bg-petal">
@@ -31,7 +34,14 @@ export default function Layout() {
             </svg>
             <span className="font-bold text-soil text-lg">Pollen</span>
           </button>
-          {user && <CreditPill amount={user.credit_balance} />}
+          {user && (
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${level.bg} ${level.color} border ${level.border}`}>
+                {level.emoji} {level.name}
+              </span>
+              <CreditPill amount={user.credit_balance} />
+            </div>
+          )}
         </div>
       </header>
 
@@ -48,12 +58,12 @@ export default function Layout() {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-3 py-1 text-xs font-medium transition-colors ${
+                `flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] font-medium transition-colors ${
                   isActive ? 'text-honey' : 'text-gray-400 hover:text-soil-light'
                 }`
               }
             >
-              <Icon size={20} />
+              <Icon size={18} />
               <span>{label}</span>
             </NavLink>
           ))}

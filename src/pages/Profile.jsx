@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Shield, BarChart3, CheckCircle, Edit3, Save } from 'lucide-react';
+import { Shield, BarChart3, CheckCircle, Edit3, Save, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCredits } from '../lib/credits';
+import { getLevel, getLevelProgress, getNextLevel, getBadgeStatus } from '../lib/gamification';
 
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
 const GENDERS = ['male', 'female', 'non-binary', 'prefer not to say'];
@@ -9,7 +10,7 @@ const EDUCATION_LEVELS = ['high_school', 'undergraduate', 'masters', 'phd'];
 const INTEREST_OPTIONS = ['Business', 'Education', 'Psychology', 'Health', 'Technology', 'Social Science'];
 
 export default function Profile() {
-  const { user, updateProfile, surveysTaken, surveysCreated } = useAuth();
+  const { user, updateProfile, surveysTaken, surveysCreated, totalEarned } = useAuth();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
 
@@ -83,6 +84,58 @@ export default function Profile() {
             <p className="text-xs text-gray-400">{label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Level */}
+      {(() => {
+        const level = getLevel(totalEarned);
+        const progress = getLevelProgress(totalEarned);
+        const next = getNextLevel(totalEarned);
+        return (
+          <div className={`rounded-xl p-4 shadow-sm border ${level.bg} ${level.border}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">{level.emoji}</span>
+              <div className="flex-1">
+                <p className={`text-sm font-bold ${level.color}`}>{level.name}</p>
+                <p className="text-xs text-gray-400">{formatCredits(totalEarned)} credits earned</p>
+              </div>
+            </div>
+            {next && (
+              <>
+                <div className="w-full bg-white/50 rounded-full h-2 mb-1">
+                  <div className={`h-2 rounded-full transition-all ${level.color === 'text-gray-400' ? 'bg-gray-400' : level.color === 'text-stem' ? 'bg-stem' : level.color === 'text-purple-600' ? 'bg-purple-500' : 'bg-honey'}`} style={{ width: `${progress}%` }} />
+                </div>
+                <p className="text-[10px] text-gray-400">{next.min - totalEarned} credits to {next.emoji} {next.name}</p>
+              </>
+            )}
+            {!next && <p className="text-[10px] text-gray-400">Max level reached!</p>}
+          </div>
+        );
+      })()}
+
+      {/* Badges */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Award size={16} className="text-honey" />
+          <h2 className="font-semibold text-soil text-sm">Achievements</h2>
+          <span className="ml-auto text-xs text-gray-400">
+            {getBadgeStatus({ surveysTaken, surveysCreated, trustScore: user.trust_score, profileComplete: completeness === 100, totalEarned }).filter((b) => b.unlocked).length}/{getBadgeStatus({ surveysTaken, surveysCreated, trustScore: user.trust_score, profileComplete: completeness === 100, totalEarned }).length}
+          </span>
+        </div>
+        <div className="grid grid-cols-5 gap-2">
+          {getBadgeStatus({ surveysTaken, surveysCreated, trustScore: user.trust_score, profileComplete: completeness === 100, totalEarned }).map((badge) => (
+            <div
+              key={badge.id}
+              className={`flex flex-col items-center p-2 rounded-lg text-center ${
+                badge.unlocked ? 'bg-honey/5' : 'bg-gray-50 opacity-40'
+              }`}
+              title={`${badge.name}: ${badge.description}`}
+            >
+              <span className="text-xl mb-0.5">{badge.emoji}</span>
+              <span className="text-[9px] text-gray-500 leading-tight">{badge.name}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Trust score */}

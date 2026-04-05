@@ -9,6 +9,8 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import SurveyResults from './pages/SurveyResults';
+import Leaderboard from './pages/Leaderboard';
+import Rewards from './pages/Rewards';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -32,7 +34,9 @@ function AppRoutes() {
         <Route path="/survey/:id" element={<SurveyViewer />} />
         <Route path="/survey/:id/results" element={<SurveyResults />} />
         <Route path="/create" element={<CreateSurvey />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/wallet" element={<Wallet />} />
+        <Route path="/rewards" element={<Rewards />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

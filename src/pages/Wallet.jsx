@@ -1,9 +1,11 @@
-import { Coins, TrendingUp, TrendingDown } from 'lucide-react';
+import { Coins, TrendingUp, TrendingDown, Gift } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import TransactionItem from '../components/TransactionItem';
 import { useAuth } from '../context/AuthContext';
 import { formatCredits } from '../lib/credits';
 
 export default function Wallet() {
+  const navigate = useNavigate();
   const { user, transactions, totalEarned, totalSpent } = useAuth();
 
   const stats = [
@@ -26,6 +28,19 @@ export default function Wallet() {
           </div>
         ))}
       </div>
+
+      {/* Redeem */}
+      <button
+        onClick={() => navigate('/rewards')}
+        className="w-full bg-honey/10 border border-honey/20 rounded-xl p-4 flex items-center gap-3 hover:bg-honey/15 transition-colors"
+      >
+        <Gift size={24} className="text-honey shrink-0" />
+        <div className="flex-1 text-left">
+          <p className="text-sm font-semibold text-soil">Redeem credits</p>
+          <p className="text-xs text-gray-400">Gift cards, stickers, donations & more</p>
+        </div>
+        <span className="text-honey text-sm font-medium">Browse &rarr;</span>
+      </button>
 
       {/* Transactions */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
