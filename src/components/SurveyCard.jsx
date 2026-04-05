@@ -15,12 +15,13 @@ function timeAgo(dateStr) {
 
 export default function SurveyCard({ survey }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasCompletedSurvey } = useAuth();
   const credits = survey.estimated_minutes;
   const tier = creditRewardTier(credits);
   const progress = (survey.responses_collected / survey.responses_needed) * 100;
   const isFull = survey.responses_collected >= survey.responses_needed;
   const isOwn = user?.id === survey.creator_id;
+  const isDone = hasCompletedSurvey(survey.id);
 
   const tierColors = {
     high: 'bg-stem/15 text-stem border-stem/30',
@@ -79,14 +80,16 @@ export default function SurveyCard({ survey }) {
         </div>
         <button
           onClick={() => navigate(`/survey/${survey.id}`)}
-          disabled={isFull || isOwn}
+          disabled={isFull || isOwn || isDone}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            isFull || isOwn
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-honey text-white hover:bg-honey-light'
+            isDone
+              ? 'bg-stem/10 text-stem cursor-not-allowed'
+              : isFull || isOwn
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-honey text-white hover:bg-honey-light'
           }`}
         >
-          {isFull ? 'Full' : isOwn ? 'Your survey' : 'Take survey'}
+          {isDone ? 'Completed' : isFull ? 'Full' : isOwn ? 'Your survey' : 'Take survey'}
         </button>
       </div>
     </div>

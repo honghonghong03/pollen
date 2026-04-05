@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [surveys, setSurveys] = useState(mockSurveys);
   const [transactions, setTransactions] = useState(mockTransactions);
+  const [surveyResponses, setSurveyResponses] = useState([]);
 
   const login = useCallback((email) => {
     const found = mockUsers.find((u) => u.email === email);
@@ -103,6 +104,57 @@ export function AuthProvider({ children }) {
     );
   }, []);
 
+  const hasCompletedSurvey = useCallback((surveyId) => {
+    return surveyResponses.some((r) => r.survey_id === surveyId && r.user_id === user?.id);
+  }, [surveyResponses, user?.id]);
+
+  const submitSurveyResponse = useCallback((surveyId, answers) => {
+    const survey = surveys.find((s) => s.id === surveyId);
+    if (!survey || !user) return false;
+
+    // Prevent double completion
+    if (surveyResponses.some((r) => r.survey_id === surveyId && r.user_id === user.id)) {
+      return false;
+    }
+
+    const response = {
+      id: 'sr' + Date.now(),
+      survey_id: surveyId,
+      user_id: user.id,
+      answers,
+      completed_at: new Date().toISOString(),
+    };
+
+    setSurveyResponses((prev) => [...prev, response]);
+
+    // Increment responses collected
+    setSurveys((prev) =>
+      prev.map((s) =>
+        s.id === surveyId
+          ? { ...s, responses_collected: s.responses_collected + 1 }
+          : s
+      )
+    );
+
+    // Award credits
+    const credits = survey.estimated_minutes;
+    setUser((prev) => prev ? { ...prev, credit_balance: prev.credit_balance + credits } : null);
+    setTransactions((prev) => [
+      {
+        id: 't' + Date.now(),
+        user_id: user.id,
+        type: 'survey_completed',
+        amount: credits,
+        description: `Completed: ${survey.title}`,
+        reference_id: surveyId,
+        created_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+
+    return true;
+  }, [surveys, user, surveyResponses]);
+
   const userTransactions = transactions.filter((t) => t.user_id === user?.id);
   const totalEarned = userTransactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
   const totalSpent = userTransactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
@@ -127,6 +179,8 @@ export function AuthProvider({ children }) {
         spendCredits,
         addSurvey,
         completeSurvey,
+        hasCompletedSurvey,
+        submitSurveyResponse,
       }}
     >
       {children}

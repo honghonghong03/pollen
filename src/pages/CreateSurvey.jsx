@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, AlertCircle, Link as LinkIcon, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { TOPICS, TIME_OPTIONS } from '../data/mock';
 import { calculateCost, getTargetingLevel, formatCredits } from '../lib/credits';
 import SurveyCard from '../components/SurveyCard';
+import QuestionBuilder from '../components/QuestionBuilder';
 
 const STEPS = ['Basics', 'Audience', 'Review'];
 
@@ -16,7 +17,9 @@ export default function CreateSurvey() {
   const [form, setForm] = useState({
     title: '',
     description: '',
+    survey_type: 'builtin',
     survey_url: '',
+    questions: [],
     estimated_minutes: 5,
     topics: [],
     responses_needed: 20,
@@ -37,14 +40,20 @@ export default function CreateSurvey() {
     });
   };
 
+  // Auto-calculate estimated time from questions
+  const autoEstimatedMinutes = Math.max(1, Math.ceil(form.questions.length * 0.5));
+
   const targetingLevel = getTargetingLevel(form);
   const totalCost = calculateCost(form.responses_needed, targetingLevel);
   const canAfford = (user?.credit_balance ?? 0) >= totalCost;
+
+  const effectiveMinutes = form.survey_type === 'builtin' ? autoEstimatedMinutes : form.estimated_minutes;
 
   const previewSurvey = {
     ...form,
     id: 'preview',
     creator_id: 'preview',
+    estimated_minutes: effectiveMinutes,
     responses_collected: 0,
     credit_cost_per_response: totalCost / form.responses_needed,
     total_credits_spent: totalCost,
@@ -52,7 +61,11 @@ export default function CreateSurvey() {
     created_at: new Date().toISOString(),
   };
 
-  const canProceedStep0 = form.title && form.description && form.survey_url && form.topics.length > 0;
+  const canProceedStep0 = form.title && form.description && form.topics.length > 0 && (
+    form.survey_type === 'builtin'
+      ? form.questions.length > 0 && form.questions.every((q) => q.text.trim())
+      : form.survey_url
+  );
   const canProceedStep1 = form.responses_needed > 0;
 
   const handlePublish = () => {
@@ -60,6 +73,8 @@ export default function CreateSurvey() {
       ...form,
       id: 's' + Date.now(),
       creator_id: user.id,
+      estimated_minutes: effectiveMinutes,
+      survey_url: form.survey_type === 'builtin' ? null : form.survey_url,
       responses_collected: 0,
       credit_cost_per_response: totalCost / form.responses_needed,
       total_credits_spent: totalCost,
@@ -97,6 +112,41 @@ export default function CreateSurvey() {
       <div className="bg-white rounded-xl p-5 shadow-sm">
         {step === 0 && (
           <div className="space-y-4">
+            {/* Survey type toggle */}
+            <div>
+              <label className="block text-sm font-medium text-soil mb-2">Survey type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => update('survey_type', 'builtin')}
+                  className={`flex items-center gap-2 p-3 rounded-lg border-2 text-left transition-colors ${
+                    form.survey_type === 'builtin'
+                      ? 'border-honey bg-honey/5'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <FileText size={18} className={form.survey_type === 'builtin' ? 'text-honey' : 'text-gray-400'} />
+                  <div>
+                    <p className={`text-sm font-medium ${form.survey_type === 'builtin' ? 'text-soil' : 'text-gray-500'}`}>Built-in survey</p>
+                    <p className="text-xs text-gray-400">Create questions here</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => update('survey_type', 'external')}
+                  className={`flex items-center gap-2 p-3 rounded-lg border-2 text-left transition-colors ${
+                    form.survey_type === 'external'
+                      ? 'border-honey bg-honey/5'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <LinkIcon size={18} className={form.survey_type === 'external' ? 'text-honey' : 'text-gray-400'} />
+                  <div>
+                    <p className={`text-sm font-medium ${form.survey_type === 'external' ? 'text-soil' : 'text-gray-500'}`}>External link</p>
+                    <p className="text-xs text-gray-400">Google Forms, etc.</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-soil mb-1">Survey title</label>
               <input
@@ -117,32 +167,47 @@ export default function CreateSurvey() {
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey resize-none"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-soil mb-1">Survey link</label>
-              <input
-                type="url"
-                value={form.survey_url}
-                onChange={(e) => update('survey_url', e.target.value)}
-                placeholder="https://forms.google.com/..."
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-soil mb-1">Estimated completion time</label>
-              <div className="flex flex-wrap gap-2">
-                {TIME_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => update('estimated_minutes', opt.value)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      form.estimated_minutes === opt.value ? 'bg-honey text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+
+            {/* Built-in: Question Builder */}
+            {form.survey_type === 'builtin' ? (
+              <div>
+                <label className="block text-sm font-medium text-soil mb-2">Questions</label>
+                <QuestionBuilder
+                  questions={form.questions}
+                  onChange={(questions) => update('questions', questions)}
+                />
               </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-soil mb-1">Survey link</label>
+                  <input
+                    type="url"
+                    value={form.survey_url}
+                    onChange={(e) => update('survey_url', e.target.value)}
+                    placeholder="https://forms.google.com/..."
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-soil mb-1">Estimated completion time</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TIME_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => update('estimated_minutes', opt.value)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          form.estimated_minutes === opt.value ? 'bg-honey text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-soil mb-1">Topics (up to 3)</label>
               <div className="flex flex-wrap gap-2">
@@ -159,6 +224,12 @@ export default function CreateSurvey() {
                 ))}
               </div>
             </div>
+
+            {form.survey_type === 'builtin' && form.questions.length > 0 && (
+              <div className="bg-petal rounded-lg p-3 text-xs text-gray-500">
+                Estimated time: ~{autoEstimatedMinutes} min &middot; Respondents earn {autoEstimatedMinutes} credits
+              </div>
+            )}
           </div>
         )}
 
@@ -278,6 +349,11 @@ export default function CreateSurvey() {
           <div className="space-y-4">
             <p className="text-sm text-gray-500">Here's how your survey will appear in the feed:</p>
             <SurveyCard survey={previewSurvey} />
+            {form.survey_type === 'builtin' && (
+              <div className="bg-petal rounded-lg p-3 text-xs text-gray-500">
+                {form.questions.length} questions &middot; ~{autoEstimatedMinutes} min &middot; Verified completion (built-in)
+              </div>
+            )}
             <div className="bg-petal rounded-xl p-4 text-center">
               <p className="text-sm text-soil-light mb-1">Total cost: <span className="font-bold text-honey">{formatCredits(totalCost)} credits</span></p>
               <p className="text-xs text-gray-400">Credits will be deducted from your balance</p>

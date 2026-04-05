@@ -9,7 +9,12 @@
       "Bash(npm install:*)",
       "Bash(git --version)",
       "Bash(gh --version)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(npx vite:*)",
+      "Bash(git add:*)"
     ]
   }
 }
