@@ -68,22 +68,19 @@ export default function CreateSurvey() {
   );
   const canProceedStep1 = form.responses_needed > 0;
 
-  const handlePublish = () => {
-    const survey = {
+  const handlePublish = async () => {
+    const surveyData = {
       ...form,
-      id: 's' + Date.now(),
-      creator_id: user.id,
       estimated_minutes: effectiveMinutes,
       survey_url: form.survey_type === 'builtin' ? null : form.survey_url,
-      responses_collected: 0,
       credit_cost_per_response: totalCost / form.responses_needed,
       total_credits_spent: totalCost,
-      status: 'active',
-      created_at: new Date().toISOString(),
     };
-    addSurvey(survey);
-    spendCredits(totalCost, `Published: ${form.title}`, 'survey_published', survey.id);
-    navigate('/');
+    const created = await addSurvey(surveyData);
+    if (created) {
+      await spendCredits(totalCost, `Published: ${form.title}`, 'survey_published', created.id);
+    }
+    navigate('/feed');
   };
 
   return (

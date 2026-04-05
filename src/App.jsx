@@ -14,15 +14,36 @@ import Rewards from './pages/Rewards';
 import Landing from './pages/Landing';
 
 function ProtectedRoute({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
 function HomeRoute() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
   if (!user) return <Landing />;
   return <Navigate to="/feed" replace />;
+}
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-dvh bg-petal flex items-center justify-center">
+      <div className="text-center">
+        <svg width="40" height="40" viewBox="0 0 32 32" className="mx-auto mb-3 animate-pulse">
+          <circle cx="16" cy="16" r="4" fill="#F2A623"/>
+          <circle cx="16" cy="6" r="2.5" fill="#E8C44A"/>
+          <circle cx="24.5" cy="11" r="2.5" fill="#E8C44A"/>
+          <circle cx="24.5" cy="21" r="2.5" fill="#E8C44A"/>
+          <circle cx="16" cy="26" r="2.5" fill="#E8C44A"/>
+          <circle cx="7.5" cy="21" r="2.5" fill="#E8C44A"/>
+          <circle cx="7.5" cy="11" r="2.5" fill="#E8C44A"/>
+        </svg>
+        <p className="text-sm text-gray-400">Loading...</p>
+      </div>
+    </div>
+  );
 }
 
 function AppRoutes() {

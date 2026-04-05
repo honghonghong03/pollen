@@ -1,186 +1,240 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { mockUsers, mockSurveys, mockTransactions } from '../data/mock';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [surveys, setSurveys] = useState(mockSurveys);
-  const [transactions, setTransactions] = useState(mockTransactions);
-  const [surveyResponses, setSurveyResponses] = useState([
-    // Seed mock responses for s1 (Remote Work) so creator can see results
-    { id: 'sr_m1', survey_id: 's1', user_id: 'u1', answers: { q1_1: '6-8 hours', q1_2: ['Social media', 'Notifications'], q1_3: 4, q1_4: 'Use a dedicated workspace and time-block your day.', q1_5: 'Yes' }, completed_at: '2026-04-04T11:00:00Z' },
-    { id: 'sr_m2', survey_id: 's1', user_id: 'u3', answers: { q1_1: '4-6 hours', q1_2: ['Household chores', 'Social media', 'Snacking'], q1_3: 3, q1_4: 'Take regular breaks.', q1_5: 'No' }, completed_at: '2026-04-04T12:30:00Z' },
-    { id: 'sr_m3', survey_id: 's1', user_id: 'mock1', answers: { q1_1: '8-10 hours', q1_2: ['Notifications', 'Family/roommates'], q1_3: 5, q1_4: '', q1_5: 'Yes' }, completed_at: '2026-04-04T14:00:00Z' },
-    { id: 'sr_m4', survey_id: 's1', user_id: 'mock2', answers: { q1_1: '6-8 hours', q1_2: ['Social media'], q1_3: 4, q1_4: 'Pomodoro technique works great.', q1_5: 'Yes' }, completed_at: '2026-04-04T15:00:00Z' },
-    { id: 'sr_m5', survey_id: 's1', user_id: 'mock3', answers: { q1_1: 'Less than 4', q1_2: ['TV/streaming', 'Social media', 'Snacking'], q1_3: 2, q1_4: 'Still figuring it out honestly.', q1_5: 'No' }, completed_at: '2026-04-04T16:00:00Z' },
-    { id: 'sr_m6', survey_id: 's1', user_id: 'mock4', answers: { q1_1: '6-8 hours', q1_2: ['Notifications'], q1_3: 4, q1_4: 'Noise-cancelling headphones.', q1_5: 'Yes' }, completed_at: '2026-04-05T08:00:00Z' },
-    { id: 'sr_m7', survey_id: 's1', user_id: 'mock5', answers: { q1_1: '4-6 hours', q1_2: ['Household chores', 'Family/roommates'], q1_3: 3, q1_4: '', q1_5: 'No' }, completed_at: '2026-04-05T09:00:00Z' },
-    { id: 'sr_m8', survey_id: 's1', user_id: 'mock6', answers: { q1_1: 'More than 10', q1_2: ['Social media', 'Notifications', 'Snacking'], q1_3: 3, q1_4: 'Set clear start and end times.', q1_5: 'Yes' }, completed_at: '2026-04-05T10:00:00Z' },
-  ]);
+  const [profile, setProfile] = useState(null);
+  const [surveys, setSurveys] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [surveyResponses, setSurveyResponses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const login = useCallback((email) => {
-    const found = mockUsers.find((u) => u.email === email);
-    if (found) {
-      setUser({ ...found });
-      return true;
+  // Fetch profile data (with retry for new signups where trigger may not have run yet)
+  const fetchProfile = useCallback(async (userId, retries = 3) => {
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (data) {
+      setProfile(data);
+      return data;
     }
-    return false;
+    if (retries > 0) {
+      await new Promise((r) => setTimeout(r, 1000));
+      return fetchProfile(userId, retries - 1);
+    }
+    return null;
   }, []);
 
-  const signup = useCallback((data) => {
-    const newUser = {
-      id: 'u' + Date.now(),
-      email: data.email,
-      display_name: data.display_name,
-      age_range: null,
-      gender: null,
-      country: null,
-      languages: [],
-      education_level: null,
-      field_of_study: null,
-      is_student: false,
-      income_bracket: null,
-      interests: [],
-      trust_score: 3.0,
-      credit_balance: 15,
-      created_at: new Date().toISOString(),
+  // Fetch all surveys
+  const fetchSurveys = useCallback(async () => {
+    const { data } = await supabase.from('surveys').select('*').order('created_at', { ascending: false });
+    if (data) setSurveys(data);
+  }, []);
+
+  // Fetch user transactions
+  const fetchTransactions = useCallback(async (userId) => {
+    const { data } = await supabase.from('transactions').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (data) setTransactions(data);
+  }, []);
+
+  // Fetch user's survey responses
+  const fetchResponses = useCallback(async (userId) => {
+    const { data } = await supabase.from('survey_responses').select('*').eq('respondent_id', userId);
+    if (data) setSurveyResponses(data);
+  }, []);
+
+  // Initialize auth state
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await Promise.all([
+          fetchProfile(session.user.id),
+          fetchTransactions(session.user.id),
+          fetchResponses(session.user.id),
+        ]);
+      }
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await Promise.all([
+          fetchProfile(session.user.id),
+          fetchTransactions(session.user.id),
+          fetchResponses(session.user.id),
+        ]);
+      } else {
+        setProfile(null);
+        setTransactions([]);
+        setSurveyResponses([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchProfile, fetchTransactions, fetchResponses]);
+
+  // Fetch surveys on mount (available to everyone including guests)
+  useEffect(() => {
+    fetchSurveys();
+  }, [fetchSurveys]);
+
+  // === AUTH ===
+  const login = useCallback(async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+    return { error: null };
+  }, []);
+
+  const signup = useCallback(async ({ email, password, display_name }) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name } },
+    });
+    if (error) return { error: error.message };
+    return { error: null };
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    setTransactions([]);
+    setSurveyResponses([]);
+  }, []);
+
+  // === PROFILE ===
+  const updateProfile = useCallback(async (updates) => {
+    if (!user) return;
+    const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
+    if (!error) setProfile((prev) => prev ? { ...prev, ...updates } : null);
+  }, [user]);
+
+  // === CREDITS ===
+  const addCredits = useCallback(async (amount, description, type = 'survey_completed', referenceId = null) => {
+    if (!user) return;
+    // Update balance
+    const newBalance = (profile?.credit_balance ?? 0) + amount;
+    await supabase.from('profiles').update({ credit_balance: newBalance }).eq('id', user.id);
+    setProfile((prev) => prev ? { ...prev, credit_balance: newBalance } : null);
+    // Log transaction
+    const txn = { user_id: user.id, type, amount, description, reference_id: referenceId };
+    const { data } = await supabase.from('transactions').insert(txn).select().single();
+    if (data) setTransactions((prev) => [data, ...prev]);
+  }, [user, profile?.credit_balance]);
+
+  const spendCredits = useCallback(async (amount, description, type = 'survey_published', referenceId = null) => {
+    if (!user) return;
+    const newBalance = (profile?.credit_balance ?? 0) - amount;
+    await supabase.from('profiles').update({ credit_balance: newBalance }).eq('id', user.id);
+    setProfile((prev) => prev ? { ...prev, credit_balance: newBalance } : null);
+    const txn = { user_id: user.id, type, amount: -amount, description, reference_id: referenceId };
+    const { data } = await supabase.from('transactions').insert(txn).select().single();
+    if (data) setTransactions((prev) => [data, ...prev]);
+  }, [user, profile?.credit_balance]);
+
+  // === SURVEYS ===
+  const addSurvey = useCallback(async (surveyData) => {
+    if (!user) return null;
+    const survey = {
+      creator_id: user.id,
+      title: surveyData.title,
+      description: surveyData.description,
+      survey_type: surveyData.survey_type,
+      survey_url: surveyData.survey_url || null,
+      questions: surveyData.questions || [],
+      estimated_minutes: surveyData.estimated_minutes,
+      topics: surveyData.topics,
+      responses_needed: surveyData.responses_needed,
+      responses_collected: 0,
+      targeting_enabled: surveyData.targeting_enabled,
+      target_age_range: surveyData.target_age_range || null,
+      target_country: surveyData.target_country || null,
+      target_education: surveyData.target_education || null,
+      target_language: surveyData.target_language || null,
+      target_custom: surveyData.target_custom || null,
+      credit_cost_per_response: surveyData.credit_cost_per_response,
+      total_credits_spent: surveyData.total_credits_spent,
+      status: 'active',
     };
-    setUser(newUser);
-    setTransactions((prev) => [
-      {
-        id: 't' + Date.now(),
-        user_id: newUser.id,
-        type: 'starter_credits',
-        amount: 15,
-        description: 'Welcome to Pollen!',
-        reference_id: null,
-        created_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-    return true;
-  }, []);
+    const { data, error } = await supabase.from('surveys').insert(survey).select().single();
+    if (data) setSurveys((prev) => [data, ...prev]);
+    return data;
+  }, [user]);
 
-  const logout = useCallback(() => setUser(null), []);
-
-  const updateProfile = useCallback((updates) => {
-    setUser((prev) => (prev ? { ...prev, ...updates } : null));
-  }, []);
-
-  const addCredits = useCallback((amount, description, type = 'survey_completed', referenceId = null) => {
-    setUser((prev) => prev ? { ...prev, credit_balance: prev.credit_balance + amount } : null);
-    setTransactions((prev) => [
-      {
-        id: 't' + Date.now(),
-        user_id: user?.id,
-        type,
-        amount,
-        description,
-        reference_id: referenceId,
-        created_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  }, [user?.id]);
-
-  const spendCredits = useCallback((amount, description, type = 'survey_published', referenceId = null) => {
-    setUser((prev) => prev ? { ...prev, credit_balance: prev.credit_balance - amount } : null);
-    setTransactions((prev) => [
-      {
-        id: 't' + Date.now(),
-        user_id: user?.id,
-        type,
-        amount: -amount,
-        description,
-        reference_id: referenceId,
-        created_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  }, [user?.id]);
-
-  const addSurvey = useCallback((survey) => {
-    setSurveys((prev) => [survey, ...prev]);
-  }, []);
-
-  const completeSurvey = useCallback((surveyId) => {
-    setSurveys((prev) =>
-      prev.map((s) =>
-        s.id === surveyId
-          ? { ...s, responses_collected: s.responses_collected + 1 }
-          : s
-      )
-    );
-  }, []);
-
-  const hasCompletedSurvey = useCallback((surveyId) => {
-    return surveyResponses.some((r) => r.survey_id === surveyId && r.user_id === user?.id);
-  }, [surveyResponses, user?.id]);
-
-  const submitSurveyResponse = useCallback((surveyId, answers) => {
+  const completeSurvey = useCallback(async (surveyId) => {
     const survey = surveys.find((s) => s.id === surveyId);
-    if (!survey || !user) return false;
+    if (!survey) return;
+    const newCount = survey.responses_collected + 1;
+    await supabase.from('surveys').update({ responses_collected: newCount }).eq('id', surveyId);
+    setSurveys((prev) => prev.map((s) => s.id === surveyId ? { ...s, responses_collected: newCount } : s));
+  }, [surveys]);
 
-    // Prevent double completion
-    if (surveyResponses.some((r) => r.survey_id === surveyId && r.user_id === user.id)) {
-      return false;
-    }
+  // === RESPONSES ===
+  const hasCompletedSurvey = useCallback((surveyId) => {
+    return surveyResponses.some((r) => r.survey_id === surveyId);
+  }, [surveyResponses]);
 
-    const response = {
-      id: 'sr' + Date.now(),
+  const submitSurveyResponse = useCallback(async (surveyId, answers) => {
+    if (!user) return false;
+    const survey = surveys.find((s) => s.id === surveyId);
+    if (!survey) return false;
+    if (hasCompletedSurvey(surveyId)) return false;
+
+    // Insert response
+    const { data: response, error } = await supabase.from('survey_responses').insert({
       survey_id: surveyId,
-      user_id: user.id,
+      respondent_id: user.id,
       answers,
-      completed_at: new Date().toISOString(),
-    };
+    }).select().single();
 
+    if (error) return false;
     setSurveyResponses((prev) => [...prev, response]);
 
     // Increment responses collected
-    setSurveys((prev) =>
-      prev.map((s) =>
-        s.id === surveyId
-          ? { ...s, responses_collected: s.responses_collected + 1 }
-          : s
-      )
-    );
+    const newCount = survey.responses_collected + 1;
+    await supabase.from('surveys').update({ responses_collected: newCount }).eq('id', surveyId);
+    setSurveys((prev) => prev.map((s) => s.id === surveyId ? { ...s, responses_collected: newCount } : s));
 
     // Award credits
     const credits = survey.estimated_minutes;
-    setUser((prev) => prev ? { ...prev, credit_balance: prev.credit_balance + credits } : null);
-    setTransactions((prev) => [
-      {
-        id: 't' + Date.now(),
-        user_id: user.id,
-        type: 'survey_completed',
-        amount: credits,
-        description: `Completed: ${survey.title}`,
-        reference_id: surveyId,
-        created_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
+    await addCredits(credits, `Completed: ${survey.title}`, 'survey_completed', surveyId);
 
     return true;
-  }, [surveys, user, surveyResponses]);
+  }, [user, surveys, hasCompletedSurvey, addCredits]);
 
-  const userTransactions = transactions.filter((t) => t.user_id === user?.id);
-  const totalEarned = userTransactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
-  const totalSpent = userTransactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  const surveysTaken = userTransactions.filter((t) => t.type === 'survey_completed').length;
+  const getSurveyResponses = useCallback(async (surveyId) => {
+    const { data } = await supabase.from('survey_responses').select('*').eq('survey_id', surveyId);
+    return data || [];
+  }, []);
+
+  // Computed stats
+  const totalEarned = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + Number(t.amount), 0);
+  const totalSpent = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+  const surveysTaken = transactions.filter((t) => t.type === 'survey_completed').length;
   const surveysCreated = surveys.filter((s) => s.creator_id === user?.id).length;
+
+  // Merge profile into a user-like object for backward compatibility
+  const userObj = profile ? {
+    ...profile,
+    id: profile.id,
+    email: profile.email || user?.email,
+  } : null;
 
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: userObj,
+        authUser: user,
         surveys,
-        transactions: userTransactions,
+        transactions,
         totalEarned,
         totalSpent,
         surveysTaken,
         surveysCreated,
+        loading,
         login,
         signup,
         logout,
@@ -191,7 +245,8 @@ export function AuthProvider({ children }) {
         completeSurvey,
         hasCompletedSurvey,
         submitSurveyResponse,
-        getSurveyResponses: (surveyId) => surveyResponses.filter((r) => r.survey_id === surveyId),
+        getSurveyResponses,
+        fetchSurveys,
       }}
     >
       {children}

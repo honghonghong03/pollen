@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3, Users, Clock, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -144,7 +145,11 @@ export default function SurveyResults() {
     );
   }
 
-  const responses = getSurveyResponses(survey.id);
+  const [responses, setResponses] = useState([]);
+  useEffect(() => {
+    getSurveyResponses(survey.id).then((data) => setResponses(data || []));
+  }, [survey.id, getSurveyResponses]);
+
   const progress = (survey.responses_collected / survey.responses_needed) * 100;
   const isBuiltin = survey.survey_type === 'builtin';
 

@@ -6,15 +6,20 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = login(email);
-    if (success) {
-      navigate('/');
+    setSubmitting(true);
+    setError('');
+    const result = await login(email, password);
+    if (result.error) {
+      setError(result.error);
+      setSubmitting(false);
     } else {
-      setError('Account not found. Try alex@example.com, priya@example.com, or jordan@example.com');
+      navigate('/feed');
     }
   };
 
@@ -51,23 +56,25 @@ export default function Login() {
             <label className="block text-sm font-medium text-soil mb-1">Password</label>
             <input
               type="password"
-              placeholder="Enter any password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="Your password"
+              required
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey"
             />
           </div>
           {error && <p className="text-xs text-terracotta">{error}</p>}
-          <button type="submit" className="w-full bg-honey text-white font-semibold py-2.5 rounded-lg hover:bg-honey-light transition-colors">
-            Log in
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-honey text-white font-semibold py-2.5 rounded-lg hover:bg-honey-light transition-colors disabled:opacity-60"
+          >
+            {submitting ? 'Logging in...' : 'Log in'}
           </button>
           <p className="text-center text-sm text-gray-400">
             Don't have an account? <Link to="/signup" className="text-stem font-medium hover:underline">Sign up</Link>
           </p>
         </form>
-
-        <div className="mt-4 bg-white/60 rounded-lg p-3 text-xs text-gray-400 text-center">
-          <p className="font-medium text-soil-light mb-1">Demo accounts</p>
-          <p>alex@example.com &middot; priya@example.com &middot; jordan@example.com</p>
-        </div>
       </div>
     </div>
   );

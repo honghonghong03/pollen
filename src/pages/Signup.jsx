@@ -11,6 +11,7 @@ export default function Signup() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [touched, setTouched] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   const passwordChecks = [
     { label: 'At least 8 characters', pass: form.password.length >= 8 },
@@ -22,7 +23,7 @@ export default function Signup() {
   const passwordsMatch = form.password === form.confirmPassword && form.confirmPassword.length > 0;
   const canSubmit = form.display_name && form.email && allChecksPassed && passwordsMatch;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -35,8 +36,18 @@ export default function Signup() {
       return;
     }
 
-    signup(form);
-    navigate('/');
+    setSubmitting(true);
+    const result = await signup({
+      email: form.email,
+      password: form.password,
+      display_name: form.display_name,
+    });
+    if (result.error) {
+      setError(result.error);
+      setSubmitting(false);
+    } else {
+      navigate('/feed');
+    }
   };
 
   return (
