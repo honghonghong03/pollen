@@ -79,17 +79,19 @@ export default function SurveyCard({ survey }) {
           </div>
         </div>
         <button
-          onClick={() => navigate(`/survey/${survey.id}`)}
-          disabled={isFull || isOwn || isDone}
+          onClick={() => isOwn ? navigate(`/survey/${survey.id}/results`) : navigate(`/survey/${survey.id}`)}
+          disabled={isFull && !isOwn || isDone}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             isDone
               ? 'bg-stem/10 text-stem cursor-not-allowed'
-              : isFull || isOwn
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-honey text-white hover:bg-honey-light'
+              : isOwn
+                ? 'bg-stem/10 text-stem hover:bg-stem/20'
+                : isFull
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-honey text-white hover:bg-honey-light'
           }`}
         >
-          {isDone ? 'Completed' : isFull ? 'Full' : isOwn ? 'Your survey' : 'Take survey'}
+          {isDone ? 'Completed' : isOwn ? 'View results' : isFull ? 'Full' : 'Take survey'}
         </button>
       </div>
     </div>

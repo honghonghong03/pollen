@@ -1,14 +1,40 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Eye, EyeOff, Check, X } from 'lucide-react';
 
 export default function Signup() {
   const navigate = useNavigate();
   const { signup } = useAuth();
-  const [form, setForm] = useState({ display_name: '', email: '' });
+  const [form, setForm] = useState({ display_name: '', email: '', password: '', confirmPassword: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState('');
+  const [touched, setTouched] = useState({});
+
+  const passwordChecks = [
+    { label: 'At least 8 characters', pass: form.password.length >= 8 },
+    { label: 'Contains a number', pass: /\d/.test(form.password) },
+    { label: 'Contains uppercase letter', pass: /[A-Z]/.test(form.password) },
+  ];
+
+  const allChecksPassed = passwordChecks.every((c) => c.pass);
+  const passwordsMatch = form.password === form.confirmPassword && form.confirmPassword.length > 0;
+  const canSubmit = form.display_name && form.email && allChecksPassed && passwordsMatch;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError('');
+
+    if (!allChecksPassed) {
+      setError('Please meet all password requirements');
+      return;
+    }
+    if (!passwordsMatch) {
+      setError('Passwords do not match');
+      return;
+    }
+
     signup(form);
     navigate('/');
   };
@@ -55,13 +81,79 @@ export default function Signup() {
           </div>
           <div>
             <label className="block text-sm font-medium text-soil mb-1">Password</label>
-            <input
-              type="password"
-              placeholder="Choose a password"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => { setForm((p) => ({ ...p, password: e.target.value })); setError(''); }}
+                onBlur={() => setTouched((p) => ({ ...p, password: true }))}
+                placeholder="Choose a password"
+                required
+                className="w-full px-3 py-2.5 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-soil"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {/* Password requirements */}
+            {(touched.password || form.password.length > 0) && (
+              <div className="mt-2 space-y-1">
+                {passwordChecks.map(({ label, pass }) => (
+                  <div key={label} className="flex items-center gap-1.5">
+                    {pass ? (
+                      <Check size={12} className="text-stem" />
+                    ) : (
+                      <X size={12} className="text-gray-300" />
+                    )}
+                    <span className={`text-xs ${pass ? 'text-stem' : 'text-gray-400'}`}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <button type="submit" className="w-full bg-honey text-white font-semibold py-2.5 rounded-lg hover:bg-honey-light transition-colors">
+          <div>
+            <label className="block text-sm font-medium text-soil mb-1">Confirm password</label>
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={form.confirmPassword}
+                onChange={(e) => { setForm((p) => ({ ...p, confirmPassword: e.target.value })); setError(''); }}
+                onBlur={() => setTouched((p) => ({ ...p, confirm: true }))}
+                placeholder="Re-enter your password"
+                required
+                className={`w-full px-3 py-2.5 pr-10 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 ${
+                  touched.confirm && !passwordsMatch && form.confirmPassword
+                    ? 'border-terracotta focus:border-terracotta'
+                    : 'border-gray-200 focus:border-honey'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-soil"
+              >
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {touched.confirm && form.confirmPassword && !passwordsMatch && (
+              <p className="text-xs text-terracotta mt-1">Passwords do not match</p>
+            )}
+            {passwordsMatch && (
+              <p className="text-xs text-stem mt-1 flex items-center gap-1">
+                <Check size={12} /> Passwords match
+              </p>
+            )}
+          </div>
+          {error && <p className="text-xs text-terracotta">{error}</p>}
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-full bg-honey text-white font-semibold py-2.5 rounded-lg hover:bg-honey-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             Create account
           </button>
           <p className="text-center text-sm text-gray-400">

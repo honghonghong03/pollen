@@ -8,6 +8,7 @@ import Wallet from './pages/Wallet';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import SurveyResults from './pages/SurveyResults';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -29,6 +30,7 @@ function AppRoutes() {
       >
         <Route path="/" element={<Feed />} />
         <Route path="/survey/:id" element={<SurveyViewer />} />
+        <Route path="/survey/:id/results" element={<SurveyResults />} />
         <Route path="/create" element={<CreateSurvey />} />
         <Route path="/wallet" element={<Wallet />} />
         <Route path="/profile" element={<Profile />} />

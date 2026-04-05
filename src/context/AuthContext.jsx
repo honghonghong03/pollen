@@ -7,7 +7,17 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [surveys, setSurveys] = useState(mockSurveys);
   const [transactions, setTransactions] = useState(mockTransactions);
-  const [surveyResponses, setSurveyResponses] = useState([]);
+  const [surveyResponses, setSurveyResponses] = useState([
+    // Seed mock responses for s1 (Remote Work) so creator can see results
+    { id: 'sr_m1', survey_id: 's1', user_id: 'u1', answers: { q1_1: '6-8 hours', q1_2: ['Social media', 'Notifications'], q1_3: 4, q1_4: 'Use a dedicated workspace and time-block your day.', q1_5: 'Yes' }, completed_at: '2026-04-04T11:00:00Z' },
+    { id: 'sr_m2', survey_id: 's1', user_id: 'u3', answers: { q1_1: '4-6 hours', q1_2: ['Household chores', 'Social media', 'Snacking'], q1_3: 3, q1_4: 'Take regular breaks.', q1_5: 'No' }, completed_at: '2026-04-04T12:30:00Z' },
+    { id: 'sr_m3', survey_id: 's1', user_id: 'mock1', answers: { q1_1: '8-10 hours', q1_2: ['Notifications', 'Family/roommates'], q1_3: 5, q1_4: '', q1_5: 'Yes' }, completed_at: '2026-04-04T14:00:00Z' },
+    { id: 'sr_m4', survey_id: 's1', user_id: 'mock2', answers: { q1_1: '6-8 hours', q1_2: ['Social media'], q1_3: 4, q1_4: 'Pomodoro technique works great.', q1_5: 'Yes' }, completed_at: '2026-04-04T15:00:00Z' },
+    { id: 'sr_m5', survey_id: 's1', user_id: 'mock3', answers: { q1_1: 'Less than 4', q1_2: ['TV/streaming', 'Social media', 'Snacking'], q1_3: 2, q1_4: 'Still figuring it out honestly.', q1_5: 'No' }, completed_at: '2026-04-04T16:00:00Z' },
+    { id: 'sr_m6', survey_id: 's1', user_id: 'mock4', answers: { q1_1: '6-8 hours', q1_2: ['Notifications'], q1_3: 4, q1_4: 'Noise-cancelling headphones.', q1_5: 'Yes' }, completed_at: '2026-04-05T08:00:00Z' },
+    { id: 'sr_m7', survey_id: 's1', user_id: 'mock5', answers: { q1_1: '4-6 hours', q1_2: ['Household chores', 'Family/roommates'], q1_3: 3, q1_4: '', q1_5: 'No' }, completed_at: '2026-04-05T09:00:00Z' },
+    { id: 'sr_m8', survey_id: 's1', user_id: 'mock6', answers: { q1_1: 'More than 10', q1_2: ['Social media', 'Notifications', 'Snacking'], q1_3: 3, q1_4: 'Set clear start and end times.', q1_5: 'Yes' }, completed_at: '2026-04-05T10:00:00Z' },
+  ]);
 
   const login = useCallback((email) => {
     const found = mockUsers.find((u) => u.email === email);
@@ -181,6 +191,7 @@ export function AuthProvider({ children }) {
         completeSurvey,
         hasCompletedSurvey,
         submitSurveyResponse,
+        getSurveyResponses: (surveyId) => surveyResponses.filter((r) => r.survey_id === surveyId),
       }}
     >
       {children}
