@@ -100,7 +100,7 @@ export default function Landing() {
 
           {/* Social proof */}
           <div className="flex items-center justify-center gap-8 pt-4">
-            <StatCard value="15" label="Free credits on signup" />
+            <StatCard value="FREE" label="First survey on us" />
             <div className="w-px h-8 bg-gray-200" />
             <StatCard value="5" label="Question types" />
             <div className="w-px h-8 bg-gray-200" />

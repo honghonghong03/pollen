@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, AlertCircle, Link as LinkIcon, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { TOPICS, TIME_OPTIONS } from '../data/mock';
-import { calculateCost, getTargetingLevel, formatCredits } from '../lib/credits';
+import { calculateCost, getTargetingLevel, formatCredits, FREE_FIRST_SURVEY_LIMIT } from '../lib/credits';
 import SurveyCard from '../components/SurveyCard';
 import QuestionBuilder from '../components/QuestionBuilder';
 
@@ -11,7 +11,7 @@ const STEPS = ['Basics', 'Audience', 'Review'];
 
 export default function CreateSurvey() {
   const navigate = useNavigate();
-  const { user, spendCredits, addSurvey } = useAuth();
+  const { user, spendCredits, addSurvey, surveysCreated } = useAuth();
   const [step, setStep] = useState(0);
 
   const [form, setForm] = useState({
@@ -43,9 +43,10 @@ export default function CreateSurvey() {
   // Auto-calculate estimated time from questions
   const autoEstimatedMinutes = Math.max(1, Math.ceil(form.questions.length * 0.5));
 
+  const isFirstSurvey = surveysCreated === 0;
   const targetingLevel = getTargetingLevel(form);
-  const totalCost = calculateCost(form.responses_needed, targetingLevel);
-  const canAfford = (user?.credit_balance ?? 0) >= totalCost;
+  const totalCost = calculateCost(form.responses_needed, targetingLevel, isFirstSurvey && form.responses_needed <= FREE_FIRST_SURVEY_LIMIT);
+  const canAfford = totalCost === 0 || (user?.credit_balance ?? 0) >= totalCost;
 
   const effectiveMinutes = form.survey_type === 'builtin' ? autoEstimatedMinutes : form.estimated_minutes;
 
@@ -77,7 +78,7 @@ export default function CreateSurvey() {
       total_credits_spent: totalCost,
     };
     const created = await addSurvey(surveyData);
-    if (created) {
+    if (created && totalCost > 0) {
       await spendCredits(totalCost, `Published: ${form.title}`, 'survey_published', created.id);
     }
     navigate('/feed');
@@ -311,31 +312,53 @@ export default function CreateSurvey() {
               </div>
             )}
 
+            {/* First survey free banner */}
+            {isFirstSurvey && (
+              <div className="bg-stem/10 border border-stem/20 rounded-xl p-4 flex items-center gap-3">
+                <span className="text-2xl">🎉</span>
+                <div>
+                  <p className="text-sm font-semibold text-stem">Your first survey is free!</p>
+                  <p className="text-xs text-gray-500">Up to {FREE_FIRST_SURVEY_LIMIT} responses, no credits needed. Welcome to Pollen.</p>
+                </div>
+              </div>
+            )}
+
             {/* Live cost preview */}
             <div className="bg-petal rounded-xl p-4 space-y-2">
               <h3 className="text-sm font-semibold text-soil">Cost breakdown</h3>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{form.responses_needed} responses x 2 cr</span>
-                <span className="text-soil">{formatCredits(form.responses_needed * 2)} cr</span>
-              </div>
-              {targetingLevel !== 'open' && (
+              {isFirstSurvey && form.responses_needed <= FREE_FIRST_SURVEY_LIMIT ? (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Targeting ({targetingLevel}) multiplier</span>
-                  <span className="text-soil">x{targetingLevel === 'basic' ? '1.5' : '2.5'}</span>
+                  <span className="text-gray-500">{form.responses_needed} responses</span>
+                  <span className="text-stem font-semibold">FREE</span>
                 </div>
+              ) : (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">{form.responses_needed} responses x 1 cr</span>
+                    <span className="text-soil">{formatCredits(form.responses_needed)} cr</span>
+                  </div>
+                  {targetingLevel !== 'open' && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Targeting ({targetingLevel}) multiplier</span>
+                      <span className="text-soil">x{targetingLevel === 'basic' ? '1.5' : '2.5'}</span>
+                    </div>
+                  )}
+                </>
               )}
               <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2">
                 <span className="text-soil">Total cost</span>
-                <span className="text-honey">{formatCredits(totalCost)} credits</span>
+                <span className={totalCost === 0 ? 'text-stem' : 'text-honey'}>{totalCost === 0 ? 'FREE' : `${formatCredits(totalCost)} credits`}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Your balance</span>
-                <span className={canAfford ? 'text-stem' : 'text-terracotta'}>{formatCredits(user?.credit_balance ?? 0)} credits</span>
-              </div>
-              {!canAfford && (
+              {totalCost > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400">Your balance</span>
+                  <span className={canAfford ? 'text-stem' : 'text-terracotta'}>{formatCredits(user?.credit_balance ?? 0)} credits</span>
+                </div>
+              )}
+              {!canAfford && totalCost > 0 && (
                 <div className="flex items-center gap-1.5 text-xs text-terracotta mt-1">
                   <AlertCircle size={12} />
-                  <span>Not enough credits. <button onClick={() => navigate('/')} className="underline">Earn more by answering surveys</button></span>
+                  <span>Not enough credits. <button onClick={() => navigate('/feed')} className="underline">Earn more by answering surveys</button></span>
                 </div>
               )}
             </div>

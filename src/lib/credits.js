@@ -4,10 +4,12 @@ export const TARGETING_MULTIPLIERS = {
   targeted: 2.5,
 };
 
-export const BASE_COST_PER_RESPONSE = 2;
+export const BASE_COST_PER_RESPONSE = 1;
 export const STARTER_CREDITS = 15;
+export const FREE_FIRST_SURVEY_LIMIT = 25; // first survey free up to 25 responses
 
-export function calculateCost(responsesNeeded, targetingLevel = 'open') {
+export function calculateCost(responsesNeeded, targetingLevel = 'open', isFirstSurvey = false) {
+  if (isFirstSurvey) return 0;
   const multiplier = TARGETING_MULTIPLIERS[targetingLevel] || 1;
   return responsesNeeded * BASE_COST_PER_RESPONSE * multiplier;
 }
