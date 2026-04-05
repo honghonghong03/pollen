@@ -15,7 +15,8 @@
       "Bash(git push:*)",
       "Bash(npx vite:*)",
       "Bash(git add:*)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(echo \"PATH: $PATH\")"
     ]
   }
 }

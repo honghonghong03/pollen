@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, Users, Clock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, BarChart3, Users, Clock, MessageSquare, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCredits } from '../lib/credits';
 
@@ -120,10 +120,59 @@ function YesNoChart({ responses, questionId }) {
   );
 }
 
+function DeleteConfirmDialog({ survey, onConfirm, onCancel, deleting }) {
+  const creditsUsed = survey.responses_collected * survey.credit_cost_per_response;
+  const refundAmount = Math.max(0, survey.total_credits_spent - creditsUsed);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-terracotta/10 flex items-center justify-center shrink-0">
+            <AlertTriangle size={20} className="text-terracotta" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-soil">Delete survey?</h3>
+            <p className="text-xs text-gray-400">This action cannot be undone</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600">
+          Are you sure you want to delete <span className="font-semibold">"{survey.title}"</span>?
+          All {survey.responses_collected} collected responses will be lost.
+        </p>
+        {refundAmount > 0 && (
+          <div className="bg-stem/10 border border-stem/20 rounded-lg p-3">
+            <p className="text-sm text-stem font-medium">
+              {formatCredits(refundAmount)} credits will be refunded to your balance.
+            </p>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex-1 py-2.5 rounded-lg bg-terracotta text-white text-sm font-semibold hover:bg-terracotta/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            <Trash2 size={14} />
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SurveyResults() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { surveys, user, getSurveyResponses } = useAuth();
+  const { surveys, user, getSurveyResponses, deleteSurvey } = useAuth();
 
   const survey = surveys.find((s) => s.id === id);
   if (!survey) {
@@ -146,18 +195,55 @@ export default function SurveyResults() {
   }
 
   const [responses, setResponses] = useState([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     getSurveyResponses(survey.id).then((data) => setResponses(data || []));
   }, [survey.id, getSurveyResponses]);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const result = await deleteSurvey(survey.id);
+    setDeleting(false);
+    if (!result.error) {
+      navigate('/feed');
+    }
+  };
 
   const progress = (survey.responses_collected / survey.responses_needed) * 100;
   const isBuiltin = survey.survey_type === 'builtin';
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate('/')} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-soil">
-        <ArrowLeft size={16} /> Back to feed
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate('/')} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-soil">
+          <ArrowLeft size={16} /> Back to feed
+        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/survey/${survey.id}/edit`)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-soil hover:bg-gray-50 transition-colors"
+          >
+            <Pencil size={14} /> Edit
+          </button>
+          <button
+            onClick={() => setShowDeleteDialog(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-terracotta/30 text-sm font-medium text-terracotta hover:bg-terracotta/5 transition-colors"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+        </div>
+      </div>
+
+      {showDeleteDialog && (
+        <DeleteConfirmDialog
+          survey={survey}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteDialog(false)}
+          deleting={deleting}
+        />
+      )}
 
       <div className="bg-white rounded-xl p-5 shadow-sm">
         <h1 className="text-lg font-bold text-soil mb-1">{survey.title}</h1>

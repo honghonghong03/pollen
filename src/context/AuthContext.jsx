@@ -185,6 +185,54 @@ export function AuthProvider({ children }) {
     setSurveys((prev) => prev.map((s) => s.id === surveyId ? { ...s, responses_collected: newCount } : s));
   }, [surveys]);
 
+  const deleteSurvey = useCallback(async (surveyId) => {
+    if (!user) return { error: 'Not logged in' };
+    const survey = surveys.find((s) => s.id === surveyId);
+    if (!survey) return { error: 'Survey not found' };
+    if (survey.creator_id !== user.id) return { error: 'Not the owner' };
+
+    // Calculate refund: credits spent minus credits already consumed by respondents
+    const creditsUsedByRespondents = survey.responses_collected * survey.credit_cost_per_response;
+    const refundAmount = Math.max(0, survey.total_credits_spent - creditsUsedByRespondents);
+
+    const { error } = await supabase.from('surveys').delete().eq('id', surveyId);
+    if (error) return { error: error.message };
+
+    setSurveys((prev) => prev.filter((s) => s.id !== surveyId));
+
+    // Refund remaining credits
+    if (refundAmount > 0) {
+      await addCredits(refundAmount, `Refund: deleted "${survey.title}"`, 'survey_deleted_refund', surveyId);
+    }
+
+    return { error: null, refundAmount };
+  }, [user, surveys, addCredits]);
+
+  const updateSurvey = useCallback(async (surveyId, updates) => {
+    if (!user) return { error: 'Not logged in' };
+    const survey = surveys.find((s) => s.id === surveyId);
+    if (!survey) return { error: 'Survey not found' };
+    if (survey.creator_id !== user.id) return { error: 'Not the owner' };
+
+    // Prevent lowering responses_needed below responses_collected
+    if (updates.responses_needed !== undefined && updates.responses_needed < survey.responses_collected) {
+      return { error: `Cannot set responses needed below ${survey.responses_collected} (already collected)` };
+    }
+
+    // Only allow updating safe fields
+    const allowedFields = ['title', 'description', 'questions', 'estimated_minutes', 'topics', 'responses_needed'];
+    const safeUpdates = {};
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined) safeUpdates[key] = updates[key];
+    }
+
+    const { error } = await supabase.from('surveys').update(safeUpdates).eq('id', surveyId);
+    if (error) return { error: error.message };
+
+    setSurveys((prev) => prev.map((s) => s.id === surveyId ? { ...s, ...safeUpdates } : s));
+    return { error: null };
+  }, [user, surveys]);
+
   // === RESPONSES ===
   const hasCompletedSurvey = useCallback((surveyId) => {
     return surveyResponses.some((r) => r.survey_id === surveyId);
@@ -255,6 +303,8 @@ export function AuthProvider({ children }) {
         addCredits,
         spendCredits,
         addSurvey,
+        updateSurvey,
+        deleteSurvey,
         completeSurvey,
         hasCompletedSurvey,
         submitSurveyResponse,

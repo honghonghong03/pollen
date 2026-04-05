@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import SurveyResults from './pages/SurveyResults';
+import EditSurvey from './pages/EditSurvey';
 import Leaderboard from './pages/Leaderboard';
 import Rewards from './pages/Rewards';
 import Landing from './pages/Landing';
@@ -68,6 +69,7 @@ function AppRoutes() {
       >
         <Route path="/survey/:id" element={<SurveyViewer />} />
         <Route path="/survey/:id/results" element={<SurveyResults />} />
+        <Route path="/survey/:id/edit" element={<EditSurvey />} />
         <Route path="/create" element={<CreateSurvey />} />
         <Route path="/wallet" element={<Wallet />} />
         <Route path="/rewards" element={<Rewards />} />
