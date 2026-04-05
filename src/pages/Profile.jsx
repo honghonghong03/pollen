@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Shield, BarChart3, CheckCircle, Edit3, Save, Award } from 'lucide-react';
+import { Shield, BarChart3, CheckCircle, Edit3, Save, Award, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { formatCredits } from '../lib/credits';
 import { getLevel, getLevelProgress, getNextLevel, getBadgeStatus } from '../lib/gamification';
@@ -10,7 +11,8 @@ const EDUCATION_LEVELS = ['high_school', 'undergraduate', 'masters', 'phd'];
 const INTEREST_OPTIONS = ['Business', 'Education', 'Psychology', 'Health', 'Technology', 'Social Science'];
 
 export default function Profile() {
-  const { user, updateProfile, surveysTaken, surveysCreated, totalEarned } = useAuth();
+  const navigate = useNavigate();
+  const { user, updateProfile, logout, surveysTaken, surveysCreated, totalEarned } = useAuth();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
 
@@ -58,17 +60,23 @@ export default function Profile() {
 
   return (
     <div className="space-y-4">
+      {/* Header with name + edit/logout */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-soil">Profile</h1>
-        {editing ? (
-          <button onClick={saveEdit} className="inline-flex items-center gap-1 text-sm font-medium text-stem">
-            <Save size={14} /> Save
-          </button>
-        ) : (
-          <button onClick={startEdit} className="inline-flex items-center gap-1 text-sm font-medium text-gray-400 hover:text-soil">
-            <Edit3 size={14} /> Edit
-          </button>
-        )}
+        <div>
+          <h1 className="text-xl font-bold text-soil">{user.display_name || 'Profile'}</h1>
+          <p className="text-xs text-gray-400">{user.email}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {editing ? (
+            <button onClick={saveEdit} className="inline-flex items-center gap-1 text-sm font-medium text-stem">
+              <Save size={14} /> Save
+            </button>
+          ) : (
+            <button onClick={startEdit} className="inline-flex items-center gap-1 text-sm font-medium text-gray-400 hover:text-soil">
+              <Edit3 size={14} /> Edit
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
@@ -272,6 +280,14 @@ export default function Profile() {
           })}
         </div>
       </div>
+
+      {/* Logout */}
+      <button
+        onClick={async () => { await logout(); navigate('/'); }}
+        className="w-full py-3 rounded-xl border border-terracotta/20 text-terracotta text-sm font-medium hover:bg-terracotta/5 transition-colors flex items-center justify-center gap-2"
+      >
+        <LogOut size={16} /> Sign out
+      </button>
     </div>
   );
 }
