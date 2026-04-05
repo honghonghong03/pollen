@@ -43,28 +43,33 @@ export function AuthProvider({ children }) {
     if (data) setSurveyResponses(data);
   }, []);
 
+  // Load all user data with error handling
+  const loadUserData = useCallback(async (userId) => {
+    try {
+      await Promise.all([
+        fetchProfile(userId),
+        fetchTransactions(userId),
+        fetchResponses(userId),
+      ]);
+    } catch (err) {
+      console.error('Error loading user data:', err);
+    }
+  }, [fetchProfile, fetchTransactions, fetchResponses]);
+
   // Initialize auth state
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        await Promise.all([
-          fetchProfile(session.user.id),
-          fetchTransactions(session.user.id),
-          fetchResponses(session.user.id),
-        ]);
+        await loadUserData(session.user.id);
       }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        await Promise.all([
-          fetchProfile(session.user.id),
-          fetchTransactions(session.user.id),
-          fetchResponses(session.user.id),
-        ]);
+        await loadUserData(session.user.id);
       } else {
         setProfile(null);
         setTransactions([]);
@@ -73,12 +78,20 @@ export function AuthProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile, fetchTransactions, fetchResponses]);
+  }, [loadUserData]);
 
   // Fetch surveys on mount (available to everyone including guests)
   useEffect(() => {
     fetchSurveys();
   }, [fetchSurveys]);
+
+  // Safety timeout — never show loading spinner for more than 5 seconds
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) setLoading(false);
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   // === AUTH ===
   const login = useCallback(async (email, password) => {
