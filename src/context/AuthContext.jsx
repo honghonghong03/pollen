@@ -13,11 +13,12 @@ export function AuthProvider({ children }) {
 
   // Fetch profile data (with retry for new signups where trigger may not have run yet)
   const fetchProfile = useCallback(async (userId, retries = 3) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (data) {
       setProfile(data);
       return data;
     }
+    if (error) console.warn('Profile fetch error:', error.message);
     if (retries > 0) {
       await new Promise((r) => setTimeout(r, 1000));
       return fetchProfile(userId, retries - 1);
@@ -47,12 +48,9 @@ export function AuthProvider({ children }) {
   const loadUserData = useCallback(async (userId) => {
     try {
       const profileData = await fetchProfile(userId);
-      // If no profile exists (orphaned session), sign out
       if (!profileData) {
-        console.warn('No profile found for user, signing out');
-        await supabase.auth.signOut();
-        setUser(null);
-        setProfile(null);
+        console.warn('No profile found for user');
+        // Don't sign out — profile might just be slow to create
         return false;
       }
       await Promise.all([
@@ -71,8 +69,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
-        const success = await loadUserData(session.user.id);
-        if (!success) setUser(null);
+        await loadUserData(session.user.id);
       } else {
         setUser(null);
       }
