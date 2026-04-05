@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -6,7 +6,11 @@ import { Eye, EyeOff, Check, X, AtSign } from 'lucide-react';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { signup, authUser } = useAuth();
+
+  useEffect(() => {
+    if (authUser) navigate('/feed', { replace: true });
+  }, [authUser, navigate]);
   const [form, setForm] = useState({ display_name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -65,9 +69,8 @@ export default function Signup() {
     if (result.error) {
       setError(result.error);
       setSubmitting(false);
-    } else {
-      navigate('/feed');
     }
+    // Redirect handled by useEffect watching authUser
   };
 
   return (

@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, authUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (authUser) navigate('/feed', { replace: true });
+  }, [authUser, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,9 +23,9 @@ export default function Login() {
     if (result.error) {
       setError(result.error);
       setSubmitting(false);
-    } else {
-      navigate('/feed');
     }
+    // Don't navigate here — onAuthStateChange will update authUser,
+    // and the useEffect above will redirect automatically
   };
 
   return (

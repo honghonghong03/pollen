@@ -14,16 +14,16 @@ import Rewards from './pages/Rewards';
 import Landing from './pages/Landing';
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { authUser, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!authUser) return <Navigate to="/login" replace />;
   return children;
 }
 
 function HomeRoute() {
-  const { user, loading } = useAuth();
+  const { authUser, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (!user) return <Landing />;
+  if (!authUser) return <Landing />;
   return <Navigate to="/feed" replace />;
 }
 
