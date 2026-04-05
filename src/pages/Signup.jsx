@@ -6,11 +6,11 @@ import { Eye, EyeOff, Check, X, AtSign } from 'lucide-react';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup, authUser } = useAuth();
+  const { signup, authUser, user, loading } = useAuth();
 
   useEffect(() => {
-    if (authUser) navigate('/feed', { replace: true });
-  }, [authUser, navigate]);
+    if (!loading && authUser && user) navigate('/feed', { replace: true });
+  }, [authUser, user, loading, navigate]);
   const [form, setForm] = useState({ display_name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);

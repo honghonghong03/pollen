@@ -46,25 +46,38 @@ export function AuthProvider({ children }) {
   // Load all user data with error handling
   const loadUserData = useCallback(async (userId) => {
     try {
+      const profileData = await fetchProfile(userId);
+      // If no profile exists (orphaned session), sign out
+      if (!profileData) {
+        console.warn('No profile found for user, signing out');
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        return false;
+      }
       await Promise.all([
-        fetchProfile(userId),
         fetchTransactions(userId),
         fetchResponses(userId),
       ]);
+      return true;
     } catch (err) {
       console.error('Error loading user data:', err);
+      return false;
     }
   }, [fetchProfile, fetchTransactions, fetchResponses]);
 
   // Initialize auth state
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setUser(session?.user ?? null);
       if (session?.user) {
-        await loadUserData(session.user.id);
+        setUser(session.user);
+        const success = await loadUserData(session.user.id);
+        if (!success) setUser(null);
+      } else {
+        setUser(null);
       }
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { setUser(null); setLoading(false); });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);

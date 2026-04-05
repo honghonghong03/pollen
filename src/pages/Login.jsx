@@ -4,16 +4,16 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, authUser } = useAuth();
+  const { login, authUser, user, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect if already logged in (wait for loading to finish and profile to exist)
   useEffect(() => {
-    if (authUser) navigate('/feed', { replace: true });
-  }, [authUser, navigate]);
+    if (!loading && authUser && user) navigate('/feed', { replace: true });
+  }, [authUser, user, loading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
