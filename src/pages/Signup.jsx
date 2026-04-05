@@ -1,17 +1,35 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Check, X } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Eye, EyeOff, Check, X, AtSign } from 'lucide-react';
 
 export default function Signup() {
   const navigate = useNavigate();
   const { signup } = useAuth();
-  const [form, setForm] = useState({ display_name: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ display_name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [touched, setTouched] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState(null); // null | 'checking' | 'available' | 'taken' | 'invalid'
+
+  const usernameRegex = /^[a-z0-9_]{3,20}$/;
+
+  const checkUsername = async (value) => {
+    if (!value) { setUsernameStatus(null); return; }
+    if (!usernameRegex.test(value)) { setUsernameStatus('invalid'); return; }
+    setUsernameStatus('checking');
+    const { data } = await supabase.from('profiles').select('id').eq('username', value).maybeSingle();
+    setUsernameStatus(data ? 'taken' : 'available');
+  };
+
+  const handleUsernameChange = (e) => {
+    const raw = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setForm((p) => ({ ...p, username: raw }));
+    setUsernameStatus(null);
+  };
 
   const passwordChecks = [
     { label: 'At least 8 characters', pass: form.password.length >= 8 },
@@ -21,7 +39,8 @@ export default function Signup() {
 
   const allChecksPassed = passwordChecks.every((c) => c.pass);
   const passwordsMatch = form.password === form.confirmPassword && form.confirmPassword.length > 0;
-  const canSubmit = form.display_name && form.email && allChecksPassed && passwordsMatch;
+  const usernameValid = usernameRegex.test(form.username) && usernameStatus === 'available';
+  const canSubmit = form.display_name && form.username && usernameValid && form.email && allChecksPassed && passwordsMatch;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,6 +60,7 @@ export default function Signup() {
       email: form.email,
       password: form.password,
       display_name: form.display_name,
+      username: form.username,
     });
     if (result.error) {
       setError(result.error);
@@ -78,6 +98,30 @@ export default function Signup() {
               required
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-soil mb-1">Username</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"><AtSign size={14} /></span>
+              <input
+                type="text"
+                value={form.username}
+                onChange={handleUsernameChange}
+                onBlur={() => { setTouched((p) => ({ ...p, username: true })); checkUsername(form.username); }}
+                placeholder="your_username"
+                required
+                maxLength={20}
+                className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-honey/50 focus:border-honey"
+              />
+            </div>
+            {touched.username && form.username && (
+              <div className="mt-1">
+                {usernameStatus === 'checking' && <p className="text-xs text-gray-400">Checking availability...</p>}
+                {usernameStatus === 'available' && <p className="text-xs text-stem flex items-center gap-1"><Check size={12} /> Username available</p>}
+                {usernameStatus === 'taken' && <p className="text-xs text-terracotta flex items-center gap-1"><X size={12} /> Username taken</p>}
+                {usernameStatus === 'invalid' && <p className="text-xs text-terracotta">3-20 chars: lowercase letters, numbers, underscores only</p>}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-soil mb-1">Email</label>

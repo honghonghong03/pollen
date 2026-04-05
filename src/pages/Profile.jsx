@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Shield, BarChart3, CheckCircle, Edit3, Save, Award, LogOut } from 'lucide-react';
+import { Shield, BarChart3, CheckCircle, Edit3, Save, Award, LogOut, AtSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { formatCredits } from '../lib/credits';
 import { getLevel, getLevelProgress, getNextLevel, getBadgeStatus } from '../lib/gamification';
 
@@ -18,9 +19,21 @@ export default function Profile() {
 
   if (!user) return null;
 
+  const [usernameStatus, setUsernameStatus] = useState(null);
+  const usernameRegex = /^[a-z0-9_]{3,20}$/;
+
+  const checkUsernameAvailability = async (value) => {
+    if (!value || value === user.username) { setUsernameStatus(null); return; }
+    if (!usernameRegex.test(value)) { setUsernameStatus('invalid'); return; }
+    setUsernameStatus('checking');
+    const { data } = await supabase.from('profiles').select('id').eq('username', value).neq('id', user.id).maybeSingle();
+    setUsernameStatus(data ? 'taken' : 'available');
+  };
+
   const startEdit = () => {
     setForm({
       display_name: user.display_name,
+      username: user.username || '',
       age_range: user.age_range || '',
       gender: user.gender || '',
       country: user.country || '',
@@ -29,10 +42,13 @@ export default function Profile() {
       is_student: user.is_student,
       interests: user.interests || [],
     });
+    setUsernameStatus(null);
     setEditing(true);
   };
 
   const saveEdit = () => {
+    if (form.username && form.username !== user.username && usernameStatus !== 'available') return;
+    if (form.username && !usernameRegex.test(form.username)) return;
     updateProfile(form);
     setEditing(false);
   };
@@ -64,6 +80,7 @@ export default function Profile() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-soil">{user.display_name || 'Profile'}</h1>
+          {user.username && <p className="text-sm text-stem font-medium">@{user.username}</p>}
           <p className="text-xs text-gray-400">{user.email}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -192,6 +209,28 @@ export default function Profile() {
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Display name</label>
               <input type="text" value={form.display_name} onChange={(e) => setForm((p) => ({ ...p, display_name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Username</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><AtSign size={13} /></span>
+                <input
+                  type="text"
+                  value={form.username}
+                  onChange={(e) => { const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''); setForm((p) => ({ ...p, username: v })); setUsernameStatus(null); }}
+                  onBlur={() => checkUsernameAvailability(form.username)}
+                  maxLength={20}
+                  className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm"
+                />
+              </div>
+              {form.username && form.username !== user.username && usernameStatus && (
+                <div className="mt-1">
+                  {usernameStatus === 'checking' && <p className="text-xs text-gray-400">Checking...</p>}
+                  {usernameStatus === 'available' && <p className="text-xs text-stem">Username available</p>}
+                  {usernameStatus === 'taken' && <p className="text-xs text-terracotta">Username taken</p>}
+                  {usernameStatus === 'invalid' && <p className="text-xs text-terracotta">3-20 chars: lowercase, numbers, underscores</p>}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Age range</label>

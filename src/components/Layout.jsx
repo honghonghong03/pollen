@@ -46,6 +46,9 @@ export default function Layout() {
           </button>
           {user ? (
             <div className="flex items-center gap-2">
+              {user.username && (
+                <span className="text-xs font-medium text-stem">@{user.username}</span>
+              )}
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${level.bg} ${level.color} border ${level.border}`}>
                 {level.emoji} {level.name}
               </span>

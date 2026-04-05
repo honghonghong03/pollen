@@ -52,22 +52,23 @@ export function getBadgeStatus(stats) {
 
 // === LEADERBOARD (mock data) ===
 const MOCK_LEADERBOARD_USERS = [
-  { id: 'lb1', name: 'Sarah Chen', totalEarned: 847, weekEarned: 62, surveysTaken: 94 },
-  { id: 'lb2', name: 'Marcus Johnson', totalEarned: 623, weekEarned: 45, surveysTaken: 71 },
-  { id: 'lb3', name: 'Aisha Patel', totalEarned: 581, weekEarned: 78, surveysTaken: 63 },
-  { id: 'lb4', name: 'David Kim', totalEarned: 445, weekEarned: 31, surveysTaken: 52 },
-  { id: 'lb5', name: 'Elena Rodriguez', totalEarned: 412, weekEarned: 55, surveysTaken: 48 },
-  { id: 'lb6', name: 'James Wright', totalEarned: 389, weekEarned: 22, surveysTaken: 41 },
-  { id: 'lb7', name: 'Mei Lin', totalEarned: 334, weekEarned: 40, surveysTaken: 38 },
-  { id: 'lb8', name: 'Omar Hassan', totalEarned: 298, weekEarned: 18, surveysTaken: 35 },
-  { id: 'lb9', name: 'Sofia Andersson', totalEarned: 256, weekEarned: 29, surveysTaken: 30 },
-  { id: 'lb10', name: 'Lucas Nguyen', totalEarned: 201, weekEarned: 15, surveysTaken: 24 },
+  { id: 'lb1', name: 'Sarah Chen', username: 'sarah_chen', totalEarned: 847, weekEarned: 62, surveysTaken: 94 },
+  { id: 'lb2', name: 'Marcus Johnson', username: 'marcusj', totalEarned: 623, weekEarned: 45, surveysTaken: 71 },
+  { id: 'lb3', name: 'Aisha Patel', username: 'aisha_p', totalEarned: 581, weekEarned: 78, surveysTaken: 63 },
+  { id: 'lb4', name: 'David Kim', username: 'dkim', totalEarned: 445, weekEarned: 31, surveysTaken: 52 },
+  { id: 'lb5', name: 'Elena Rodriguez', username: 'elena_r', totalEarned: 412, weekEarned: 55, surveysTaken: 48 },
+  { id: 'lb6', name: 'James Wright', username: 'jwright', totalEarned: 389, weekEarned: 22, surveysTaken: 41 },
+  { id: 'lb7', name: 'Mei Lin', username: 'mei_lin', totalEarned: 334, weekEarned: 40, surveysTaken: 38 },
+  { id: 'lb8', name: 'Omar Hassan', username: 'omar_h', totalEarned: 298, weekEarned: 18, surveysTaken: 35 },
+  { id: 'lb9', name: 'Sofia Andersson', username: 'sofia_a', totalEarned: 256, weekEarned: 29, surveysTaken: 30 },
+  { id: 'lb10', name: 'Lucas Nguyen', username: 'lucas_ng', totalEarned: 201, weekEarned: 15, surveysTaken: 24 },
 ];
 
 export function getLeaderboard(tab, currentUser, totalEarned, surveysTaken) {
   const userEntry = currentUser ? {
     id: currentUser.id,
     name: currentUser.display_name,
+    username: currentUser.username || null,
     totalEarned,
     weekEarned: Math.round(totalEarned * 0.15),
     surveysTaken,

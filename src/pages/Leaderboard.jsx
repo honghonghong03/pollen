@@ -65,7 +65,7 @@ export default function Leaderboard() {
                 {entry.name.charAt(0)}
               </div>
 
-              {/* Name + level */}
+              {/* Name + username + level */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className={`text-sm font-medium truncate ${entry.isCurrentUser ? 'text-honey' : 'text-soil'}`}>
@@ -74,6 +74,8 @@ export default function Leaderboard() {
                   </p>
                 </div>
                 <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                  {entry.username && <span className="text-stem font-medium">@{entry.username}</span>}
+                  {entry.username && <span>&middot;</span>}
                   <span>{level.emoji}</span> {level.name}
                 </p>
               </div>
