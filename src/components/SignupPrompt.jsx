@@ -6,18 +6,18 @@ export default function SignupPrompt({ onClose }) {
 
   const handleSignup = () => {
     onClose();
-    navigate('/signup');
+    setTimeout(() => navigate('/signup'), 0);
   };
 
   const handleLogin = () => {
     onClose();
-    navigate('/login');
+    setTimeout(() => navigate('/login'), 0);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-0 sm:pb-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full shadow-xl">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-soil">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-0 sm:pb-4" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full shadow-xl relative" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-soil z-10">
           <X size={20} />
         </button>
 
