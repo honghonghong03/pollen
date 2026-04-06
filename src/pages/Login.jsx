@@ -1,19 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const navigate = useNavigate();
-  const { login, authUser, user, loading } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  // Redirect if already logged in (wait for loading to finish and profile to exist)
-  useEffect(() => {
-    if (!loading && authUser && user) navigate('/feed', { replace: true });
-  }, [authUser, user, loading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,9 +17,10 @@ export default function Login() {
     if (result.error) {
       setError(result.error);
       setSubmitting(false);
+    } else {
+      // Hard redirect to feed — guarantees navigation works
+      window.location.href = '/feed';
     }
-    // Don't navigate here — onAuthStateChange will update authUser,
-    // and the useEffect above will redirect automatically
   };
 
   return (
@@ -77,7 +72,7 @@ export default function Login() {
             {submitting ? 'Logging in...' : 'Log in'}
           </button>
           <p className="text-center text-sm text-gray-400">
-            Don't have an account? <Link to="/signup" className="text-stem font-medium hover:underline">Sign up</Link>
+            Don't have an account? <a href="/signup" className="text-stem font-medium hover:underline">Sign up</a>
           </p>
         </form>
       </div>

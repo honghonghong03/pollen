@@ -1,16 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Eye, EyeOff, Check, X, AtSign } from 'lucide-react';
 
 export default function Signup() {
-  const navigate = useNavigate();
-  const { signup, authUser, user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && authUser && user) navigate('/feed', { replace: true });
-  }, [authUser, user, loading, navigate]);
+  const { signup } = useAuth();
   const [form, setForm] = useState({ display_name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -69,8 +63,9 @@ export default function Signup() {
     if (result.error) {
       setError(result.error);
       setSubmitting(false);
+    } else {
+      window.location.href = '/feed';
     }
-    // Redirect handled by useEffect watching authUser
   };
 
   return (
@@ -215,7 +210,7 @@ export default function Signup() {
             Create account
           </button>
           <p className="text-center text-sm text-gray-400">
-            Already have an account? <Link to="/login" className="text-stem font-medium hover:underline">Log in</Link>
+            Already have an account? <a href="/login" className="text-stem font-medium hover:underline">Log in</a>
           </p>
         </form>
       </div>
