@@ -21,13 +21,6 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-function HomeRoute() {
-  const { authUser, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
-  if (!authUser) return <Landing />;
-  return <Navigate to="/feed" replace />;
-}
-
 function LoadingScreen() {
   return (
     <div className="min-h-dvh bg-petal flex items-center justify-center">
@@ -48,32 +41,28 @@ function LoadingScreen() {
 }
 
 function AppRoutes() {
+  const { authUser, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+
   return (
     <Routes>
-      {/* Landing page for guests, redirect to feed for logged-in */}
-      <Route path="/" element={<HomeRoute />} />
+      {/* Root: landing page for guests, feed for logged-in */}
+      <Route path="/" element={authUser ? <Navigate to="/feed" replace /> : <Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      {/* Guest-accessible routes (feed + leaderboard) */}
+      {/* App routes inside Layout (accessible to guests + logged-in) */}
       <Route element={<Layout />}>
         <Route path="/feed" element={<Feed />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
-      </Route>
-      {/* Protected routes */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/survey/:id" element={<SurveyViewer />} />
-        <Route path="/survey/:id/results" element={<SurveyResults />} />
-        <Route path="/survey/:id/edit" element={<EditSurvey />} />
-        <Route path="/create" element={<CreateSurvey />} />
-        <Route path="/wallet" element={<Wallet />} />
-        <Route path="/rewards" element={<Rewards />} />
-        <Route path="/profile" element={<Profile />} />
+        {/* Protected routes — redirect to login if not authenticated */}
+        <Route path="/survey/:id" element={authUser ? <SurveyViewer /> : <Navigate to="/login" replace />} />
+        <Route path="/survey/:id/results" element={authUser ? <SurveyResults /> : <Navigate to="/login" replace />} />
+        <Route path="/survey/:id/edit" element={authUser ? <EditSurvey /> : <Navigate to="/login" replace />} />
+        <Route path="/create" element={authUser ? <CreateSurvey /> : <Navigate to="/login" replace />} />
+        <Route path="/wallet" element={authUser ? <Wallet /> : <Navigate to="/login" replace />} />
+        <Route path="/rewards" element={authUser ? <Rewards /> : <Navigate to="/login" replace />} />
+        <Route path="/profile" element={authUser ? <Profile /> : <Navigate to="/login" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
