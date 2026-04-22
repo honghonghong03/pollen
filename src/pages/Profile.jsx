@@ -20,17 +20,43 @@ export default function Profile() {
   const [directProfile, setDirectProfile] = useState(null);
   const usernameRegex = /^[a-z0-9_]{3,20}$/;
 
-  // Fallback: if context doesn't have profile after 2s, fetch directly
+  // Fallback: if context doesn't have profile, fetch directly via raw REST API
   useEffect(() => {
     if (user || !authUser) return;
-    const timer = setTimeout(async () => {
-      if (user) return; // context loaded in time
-      console.log('[Pollen] Profile fallback fetch for', authUser.id);
+    let cancelled = false;
+
+    (async () => {
+      // Try Supabase client first
+      console.log('[Pollen] Fallback: fetching profile for', authUser.id);
       const { data, error } = await supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle();
-      console.log('[Pollen] Profile fallback result:', { data: !!data, error: error?.message });
-      if (data) setDirectProfile(data);
-    }, 2000);
-    return () => clearTimeout(timer);
+      console.log('[Pollen] Supabase client result:', { data: !!data, error: error?.message, errorDetails: error });
+
+      if (!cancelled && data) {
+        setDirectProfile(data);
+        return;
+      }
+
+      // If Supabase client failed, try raw fetch with anon key
+      console.log('[Pollen] Supabase client failed, trying raw fetch...');
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${authUser.id}`;
+        const res = await fetch(url, {
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        });
+        const rows = await res.json();
+        console.log('[Pollen] Raw fetch result:', rows);
+        if (!cancelled && rows?.[0]) {
+          setDirectProfile(rows[0]);
+        }
+      } catch (err) {
+        console.error('[Pollen] Raw fetch error:', err);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [user, authUser]);
 
   if (!authUser) return null;
