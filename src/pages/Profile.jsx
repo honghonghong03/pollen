@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, BarChart3, CheckCircle, Edit3, Save, Award, LogOut, AtSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -17,12 +17,28 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [usernameStatus, setUsernameStatus] = useState(null);
+  const [directProfile, setDirectProfile] = useState(null);
   const usernameRegex = /^[a-z0-9_]{3,20}$/;
+
+  // Fallback: if context doesn't have profile after 2s, fetch directly
+  useEffect(() => {
+    if (user || !authUser) return;
+    const timer = setTimeout(async () => {
+      if (user) return; // context loaded in time
+      console.log('[Pollen] Profile fallback fetch for', authUser.id);
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle();
+      console.log('[Pollen] Profile fallback result:', { data: !!data, error: error?.message });
+      if (data) setDirectProfile(data);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [user, authUser]);
 
   if (!authUser) return null;
 
-  // Profile data still loading from DB — show loading state
-  if (!user) {
+  // Use context profile if available, otherwise use direct fetch
+  const profileData = user || directProfile;
+
+  if (!profileData) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
@@ -34,31 +50,31 @@ export default function Profile() {
   }
 
   const checkUsernameAvailability = async (value) => {
-    if (!value || value === user.username) { setUsernameStatus(null); return; }
+    if (!value || value === profileData.username) { setUsernameStatus(null); return; }
     if (!usernameRegex.test(value)) { setUsernameStatus('invalid'); return; }
     setUsernameStatus('checking');
-    const { data } = await supabase.from('profiles').select('id').eq('username', value).neq('id', user.id).maybeSingle();
+    const { data } = await supabase.from('profiles').select('id').eq('username', value).neq('id', profileData.id).maybeSingle();
     setUsernameStatus(data ? 'taken' : 'available');
   };
 
   const startEdit = () => {
     setForm({
-      display_name: user.display_name,
-      username: user.username || '',
-      age_range: user.age_range || '',
-      gender: user.gender || '',
-      country: user.country || '',
-      education_level: user.education_level || '',
-      field_of_study: user.field_of_study || '',
-      is_student: user.is_student,
-      interests: user.interests || [],
+      display_name: profileData.display_name,
+      username: profileData.username || '',
+      age_range: profileData.age_range || '',
+      gender: profileData.gender || '',
+      country: profileData.country || '',
+      education_level: profileData.education_level || '',
+      field_of_study: profileData.field_of_study || '',
+      is_student: profileData.is_student,
+      interests: profileData.interests || [],
     });
     setUsernameStatus(null);
     setEditing(true);
   };
 
   const saveEdit = () => {
-    if (form.username && form.username !== user.username && usernameStatus !== 'available') return;
+    if (form.username && form.username !== profileData.username && usernameStatus !== 'available') return;
     if (form.username && !usernameRegex.test(form.username)) return;
     updateProfile(form);
     setEditing(false);
@@ -75,7 +91,7 @@ export default function Profile() {
 
   // Profile completeness
   const fields = ['age_range', 'gender', 'country', 'education_level', 'field_of_study'];
-  const filled = fields.filter((f) => user[f]).length;
+  const filled = fields.filter((f) => profileData[f]).length;
   const completeness = Math.round((filled / fields.length) * 100);
 
   // Trust score breakdown (mock)
@@ -90,9 +106,9 @@ export default function Profile() {
       {/* Header with name + edit/logout */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-soil">{user.display_name || 'Profile'}</h1>
-          {user.username && <p className="text-sm text-stem font-medium">@{user.username}</p>}
-          <p className="text-xs text-gray-400">{user.email}</p>
+          <h1 className="text-xl font-bold text-soil">{profileData.display_name || 'Profile'}</h1>
+          {profileData.username && <p className="text-sm text-stem font-medium">@{profileData.username}</p>}
+          <p className="text-xs text-gray-400">{profileData.email}</p>
         </div>
         <div className="flex items-center gap-2">
           {editing ? (
@@ -110,8 +126,8 @@ export default function Profile() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2">
         {[
-          { label: 'Credits', value: formatCredits(user.credit_balance), color: 'text-honey' },
-          { label: 'Trust', value: user.trust_score.toFixed(1), color: 'text-stem' },
+          { label: 'Credits', value: formatCredits(profileData.credit_balance), color: 'text-honey' },
+          { label: 'Trust', value: profileData.trust_score.toFixed(1), color: 'text-stem' },
           { label: 'Taken', value: surveysTaken, color: 'text-soil' },
           { label: 'Created', value: surveysCreated, color: 'text-soil' },
         ].map(({ label, value, color }) => (
@@ -155,11 +171,11 @@ export default function Profile() {
           <Award size={16} className="text-honey" />
           <h2 className="font-semibold text-soil text-sm">Achievements</h2>
           <span className="ml-auto text-xs text-gray-400">
-            {getBadgeStatus({ surveysTaken, surveysCreated, trustScore: user.trust_score, profileComplete: completeness === 100, totalEarned }).filter((b) => b.unlocked).length}/{getBadgeStatus({ surveysTaken, surveysCreated, trustScore: user.trust_score, profileComplete: completeness === 100, totalEarned }).length}
+            {getBadgeStatus({ surveysTaken, surveysCreated, trustScore: profileData.trust_score, profileComplete: completeness === 100, totalEarned }).filter((b) => b.unlocked).length}/{getBadgeStatus({ surveysTaken, surveysCreated, trustScore: profileData.trust_score, profileComplete: completeness === 100, totalEarned }).length}
           </span>
         </div>
         <div className="grid grid-cols-5 gap-2">
-          {getBadgeStatus({ surveysTaken, surveysCreated, trustScore: user.trust_score, profileComplete: completeness === 100, totalEarned }).map((badge) => (
+          {getBadgeStatus({ surveysTaken, surveysCreated, trustScore: profileData.trust_score, profileComplete: completeness === 100, totalEarned }).map((badge) => (
             <div
               key={badge.id}
               className={`flex flex-col items-center p-2 rounded-lg text-center ${
@@ -179,7 +195,7 @@ export default function Profile() {
         <div className="flex items-center gap-2 mb-3">
           <Shield size={16} className="text-stem" />
           <h2 className="font-semibold text-soil text-sm">Trust score</h2>
-          <span className="ml-auto text-lg font-bold text-stem">{user.trust_score.toFixed(1)}</span>
+          <span className="ml-auto text-lg font-bold text-stem">{profileData.trust_score.toFixed(1)}</span>
         </div>
         <div className="space-y-2">
           {trustBreakdown.map(({ label, value }) => (
@@ -234,7 +250,7 @@ export default function Profile() {
                   className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm"
                 />
               </div>
-              {form.username && form.username !== user.username && usernameStatus && (
+              {form.username && form.username !== profileData.username && usernameStatus && (
                 <div className="mt-1">
                   {usernameStatus === 'checking' && <p className="text-xs text-gray-400">Checking...</p>}
                   {usernameStatus === 'available' && <p className="text-xs text-stem">Username available</p>}
@@ -285,12 +301,12 @@ export default function Profile() {
         ) : (
           <div className="flex flex-wrap gap-2">
             {[
-              { label: user.age_range, filled: !!user.age_range },
-              { label: user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'Gender', filled: !!user.gender },
-              { label: user.country || 'Country', filled: !!user.country },
-              { label: user.education_level?.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Education', filled: !!user.education_level },
-              { label: user.field_of_study || 'Field of study', filled: !!user.field_of_study },
-              { label: user.is_student ? 'Student' : null, filled: true },
+              { label: profileData.age_range, filled: !!profileData.age_range },
+              { label: profileData.gender ? profileData.gender.charAt(0).toUpperCase() + profileData.gender.slice(1) : 'Gender', filled: !!profileData.gender },
+              { label: profileData.country || 'Country', filled: !!profileData.country },
+              { label: profileData.education_level?.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Education', filled: !!profileData.education_level },
+              { label: profileData.field_of_study || 'Field of study', filled: !!profileData.field_of_study },
+              { label: profileData.is_student ? 'Student' : null, filled: true },
             ].filter(Boolean).filter((t) => t.label).map(({ label, filled }) => (
               <span
                 key={label}
@@ -311,7 +327,7 @@ export default function Profile() {
         <h2 className="font-semibold text-soil text-sm mb-2">Interests</h2>
         <div className="flex flex-wrap gap-2">
           {INTEREST_OPTIONS.map((interest) => {
-            const active = editing ? form.interests.includes(interest) : user.interests?.includes(interest);
+            const active = editing ? form.interests.includes(interest) : profileData.interests?.includes(interest);
             return (
               <button
                 key={interest}
