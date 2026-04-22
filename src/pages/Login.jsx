@@ -13,13 +13,20 @@ export default function Login() {
     e.preventDefault();
     setSubmitting(true);
     setError('');
-    const result = await login(email, password);
-    if (result.error) {
-      setError(result.error);
+    try {
+      const result = await login(email, password);
+      if (result.error) {
+        setError(result.error);
+        setSubmitting(false);
+      } else {
+        // Small delay to let Supabase session settle, then hard redirect
+        setTimeout(() => {
+          window.location.href = '/feed';
+        }, 300);
+      }
+    } catch (err) {
+      setError(err.message || 'Something went wrong');
       setSubmitting(false);
-    } else {
-      // Hard redirect to feed — guarantees navigation works
-      window.location.href = '/feed';
     }
   };
 

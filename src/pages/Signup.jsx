@@ -54,17 +54,24 @@ export default function Signup() {
     }
 
     setSubmitting(true);
-    const result = await signup({
-      email: form.email,
-      password: form.password,
-      display_name: form.display_name,
-      username: form.username,
-    });
-    if (result.error) {
-      setError(result.error);
+    try {
+      const result = await signup({
+        email: form.email,
+        password: form.password,
+        display_name: form.display_name,
+        username: form.username,
+      });
+      if (result.error) {
+        setError(result.error);
+        setSubmitting(false);
+      } else {
+        setTimeout(() => {
+          window.location.href = '/feed';
+        }, 300);
+      }
+    } catch (err) {
+      setError(err.message || 'Something went wrong');
       setSubmitting(false);
-    } else {
-      window.location.href = '/feed';
     }
   };
 

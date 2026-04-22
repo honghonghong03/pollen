@@ -49,8 +49,8 @@ function AppRoutes() {
     <Routes>
       {/* Root: landing page for guests, feed for logged-in */}
       <Route path="/" element={authUser ? <Navigate to="/feed" replace /> : <Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route path="/login" element={authUser ? <Navigate to="/feed" replace /> : <Login />} />
+      <Route path="/signup" element={authUser ? <Navigate to="/feed" replace /> : <Signup />} />
       {/* App routes inside Layout (accessible to guests + logged-in) */}
       <Route element={<Layout />}>
         <Route path="/feed" element={<Feed />} />

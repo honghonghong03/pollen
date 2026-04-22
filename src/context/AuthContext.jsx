@@ -13,17 +13,26 @@ export function AuthProvider({ children }) {
 
   // Fetch profile data (with retry for new signups where trigger may not have run yet)
   const fetchProfile = useCallback(async (userId, retries = 3) => {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (data) {
-      setProfile(data);
-      return data;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      if (data) {
+        setProfile(data);
+        return data;
+      }
+      if (error) console.warn('Profile fetch error:', error.message);
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return fetchProfile(userId, retries - 1);
+      }
+      return null;
+    } catch (err) {
+      console.error('Profile fetch exception:', err);
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return fetchProfile(userId, retries - 1);
+      }
+      return null;
     }
-    if (error) console.warn('Profile fetch error:', error.message);
-    if (retries > 0) {
-      await new Promise((r) => setTimeout(r, 1000));
-      return fetchProfile(userId, retries - 1);
-    }
-    return null;
   }, []);
 
   // Fetch all surveys
@@ -66,28 +75,49 @@ export function AuthProvider({ children }) {
 
   // Initialize auth state
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
       if (session?.user) {
         setUser(session.user);
-        await loadUserData(session.user.id);
+        const success = await loadUserData(session.user.id);
+        if (!mounted) return;
+        if (!success) {
+          // Session exists but profile doesn't — could be stale/deleted account
+          // Clear the session so user sees landing page
+          console.warn('Session exists but no profile found — signing out stale session');
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+        }
       } else {
         setUser(null);
       }
-      setLoading(false);
-    }).catch(() => { setUser(null); setLoading(false); });
+      if (mounted) setLoading(false);
+    }).catch(() => {
+      if (mounted) { setUser(null); setLoading(false); }
+    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadUserData(session.user.id);
-      } else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
         setProfile(null);
         setTransactions([]);
         setSurveyResponses([]);
+        return;
+      }
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await loadUserData(session.user.id);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [loadUserData]);
 
   // Fetch surveys on mount (available to everyone including guests)
@@ -105,19 +135,29 @@ export function AuthProvider({ children }) {
 
   // === AUTH ===
   const login = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-    return { error: null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (err) {
+      console.error('Login error:', err);
+      return { error: err.message || 'Login failed' };
+    }
   }, []);
 
   const signup = useCallback(async ({ email, password, display_name, username }) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { display_name, username } },
-    });
-    if (error) return { error: error.message };
-    return { error: null };
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name, username } },
+      });
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (err) {
+      console.error('Signup error:', err);
+      return { error: err.message || 'Signup failed' };
+    }
   }, []);
 
   const logout = useCallback(async () => {
