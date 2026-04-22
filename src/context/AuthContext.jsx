@@ -11,28 +11,29 @@ export function AuthProvider({ children }) {
   const [surveyResponses, setSurveyResponses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile data (with retry for new signups where trigger may not have run yet)
+  // Fetch profile data via raw REST (Supabase client hangs during auth init)
   const fetchProfile = useCallback(async (userId, retries = 3) => {
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-      if (data) {
-        setProfile(data);
-        return data;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${userId}`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+      });
+      const rows = await res.json();
+      if (rows?.[0]) {
+        setProfile(rows[0]);
+        return rows[0];
       }
-      if (error) console.warn('Profile fetch error:', error.message);
-      if (retries > 0) {
-        await new Promise((r) => setTimeout(r, 1000));
-        return fetchProfile(userId, retries - 1);
-      }
-      return null;
     } catch (err) {
-      console.error('Profile fetch exception:', err);
-      if (retries > 0) {
-        await new Promise((r) => setTimeout(r, 1000));
-        return fetchProfile(userId, retries - 1);
-      }
-      return null;
+      console.error('[Pollen] Profile fetch error:', err);
     }
+    if (retries > 0) {
+      await new Promise((r) => setTimeout(r, 1000));
+      return fetchProfile(userId, retries - 1);
+    }
+    return null;
   }, []);
 
   // Fetch all surveys
@@ -77,6 +78,7 @@ export function AuthProvider({ children }) {
 
   // Load all user data with error handling
   const loadUserData = useCallback(async (userId, authUserObj) => {
+    console.log('[Pollen] loadUserData called, userId:', userId);
     try {
       let profileData = await fetchProfile(userId);
       if (!profileData && authUserObj) {
