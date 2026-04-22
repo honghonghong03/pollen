@@ -98,40 +98,37 @@ export function AuthProvider({ children }) {
     }
   }, [fetchProfile, fetchTransactions, fetchResponses, ensureProfile]);
 
-  // Initialize auth state
+  // Initialize auth state — single path via onAuthStateChange (fires INITIAL_SESSION in v2)
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.user) {
-        setUser(session.user);
-        await loadUserData(session.user.id, session.user);
-      } else {
-        setUser(null);
-      }
-      if (mounted) setLoading(false);
-    }).catch(() => {
-      if (mounted) { setUser(null); setLoading(false); }
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      if (event === 'SIGNED_OUT') {
+      console.log('[Pollen] auth event:', event, session?.user?.email);
+
+      if (event === 'SIGNED_OUT' || !session?.user) {
         setUser(null);
         setProfile(null);
         setTransactions([]);
         setSurveyResponses([]);
+        setLoading(false);
         return;
       }
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadUserData(session.user.id, session.user);
-      }
+
+      // SIGNED_IN, INITIAL_SESSION, TOKEN_REFRESHED
+      setUser(session.user);
+      await loadUserData(session.user.id, session.user);
+      if (mounted) setLoading(false);
     });
+
+    // Fallback: if no auth event fires within 3 seconds, stop loading
+    const fallback = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 3000);
 
     return () => {
       mounted = false;
+      clearTimeout(fallback);
       subscription.unsubscribe();
     };
   }, [loadUserData]);
