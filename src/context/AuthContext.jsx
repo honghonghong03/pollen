@@ -53,13 +53,38 @@ export function AuthProvider({ children }) {
     if (data) setSurveyResponses(data);
   }, []);
 
+  // Create profile if it doesn't exist (fallback for when DB trigger didn't fire)
+  const ensureProfile = useCallback(async (authUserObj) => {
+    const meta = authUserObj.user_metadata || {};
+    const fallbackProfile = {
+      id: authUserObj.id,
+      email: authUserObj.email,
+      display_name: meta.display_name || meta.full_name || authUserObj.email?.split('@')[0] || 'User',
+      username: meta.username || null,
+      credit_balance: 15,
+      trust_score: 4.2,
+      is_student: false,
+      interests: [],
+    };
+    const { data, error } = await supabase.from('profiles').upsert(fallbackProfile, { onConflict: 'id' }).select().single();
+    if (data) {
+      setProfile(data);
+      return data;
+    }
+    console.error('Failed to create fallback profile:', error?.message);
+    return null;
+  }, []);
+
   // Load all user data with error handling
-  const loadUserData = useCallback(async (userId) => {
+  const loadUserData = useCallback(async (userId, authUserObj) => {
     try {
-      const profileData = await fetchProfile(userId);
+      let profileData = await fetchProfile(userId);
+      if (!profileData && authUserObj) {
+        console.warn('No profile found — creating one');
+        profileData = await ensureProfile(authUserObj);
+      }
       if (!profileData) {
-        console.warn('No profile found for user');
-        // Don't sign out — profile might just be slow to create
+        console.warn('Could not load or create profile');
         return false;
       }
       await Promise.all([
@@ -71,7 +96,7 @@ export function AuthProvider({ children }) {
       console.error('Error loading user data:', err);
       return false;
     }
-  }, [fetchProfile, fetchTransactions, fetchResponses]);
+  }, [fetchProfile, fetchTransactions, fetchResponses, ensureProfile]);
 
   // Initialize auth state
   useEffect(() => {
@@ -81,7 +106,7 @@ export function AuthProvider({ children }) {
       if (!mounted) return;
       if (session?.user) {
         setUser(session.user);
-        await loadUserData(session.user.id);
+        await loadUserData(session.user.id, session.user);
       } else {
         setUser(null);
       }
@@ -101,7 +126,7 @@ export function AuthProvider({ children }) {
       }
       setUser(session?.user ?? null);
       if (session?.user) {
-        await loadUserData(session.user.id);
+        await loadUserData(session.user.id, session.user);
       }
     });
 

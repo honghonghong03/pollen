@@ -13,14 +13,25 @@ const INTEREST_OPTIONS = ['Business', 'Education', 'Psychology', 'Health', 'Tech
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, updateProfile, logout, surveysTaken, surveysCreated, totalEarned } = useAuth();
+  const { user, authUser, updateProfile, logout, surveysTaken, surveysCreated, totalEarned } = useAuth();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
-
-  if (!user) return null;
-
   const [usernameStatus, setUsernameStatus] = useState(null);
   const usernameRegex = /^[a-z0-9_]{3,20}$/;
+
+  if (!authUser) return null;
+
+  // Profile data still loading from DB — show loading state
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="animate-pulse text-3xl mb-2">🌱</div>
+          <p className="text-sm text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   const checkUsernameAvailability = async (value) => {
     if (!value || value === user.username) { setUsernameStatus(null); return; }
