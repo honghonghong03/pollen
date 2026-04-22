@@ -15,13 +15,15 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const { user, totalEarned } = useAuth();
+  const { user, authUser, totalEarned } = useAuth();
   const navigate = useNavigate();
   const level = getLevel(totalEarned);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
 
+  const isLoggedIn = !!authUser;
+
   const handleNavClick = (item, e) => {
-    if (!user && !item.guest) {
+    if (!isLoggedIn && !item.guest) {
       e.preventDefault();
       setShowSignupPrompt(true);
     }
@@ -44,15 +46,19 @@ export default function Layout() {
             </svg>
             <span className="font-bold text-soil text-lg">Pollen</span>
           </button>
-          {user ? (
+          {isLoggedIn ? (
             <div className="flex items-center gap-2">
-              {user.username && (
+              {user?.username && (
                 <span className="text-xs font-medium text-stem">@{user.username}</span>
               )}
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${level.bg} ${level.color} border ${level.border}`}>
-                {level.emoji} {level.name}
-              </span>
-              <CreditPill amount={user.credit_balance} />
+              {user && (
+                <>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${level.bg} ${level.color} border ${level.border}`}>
+                    {level.emoji} {level.name}
+                  </span>
+                  <CreditPill amount={user.credit_balance} />
+                </>
+              )}
             </div>
           ) : (
             <a

@@ -15,7 +15,7 @@ function timeAgo(dateStr) {
 
 export default function SurveyCard({ survey }) {
   const navigate = useNavigate();
-  const { user, hasCompletedSurvey } = useAuth();
+  const { user, authUser, hasCompletedSurvey } = useAuth();
   const outletContext = useOutletContext() || {};
   const showSignupPrompt = outletContext.showSignupPrompt;
   const credits = survey.estimated_minutes;
@@ -82,7 +82,7 @@ export default function SurveyCard({ survey }) {
         </div>
         <button
           onClick={() => {
-            if (!user && showSignupPrompt) return showSignupPrompt();
+            if (!authUser && showSignupPrompt) return showSignupPrompt();
             isOwn ? navigate(`/survey/${survey.id}/results`) : navigate(`/survey/${survey.id}`);
           }}
           disabled={isFull && !isOwn || isDone}

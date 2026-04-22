@@ -81,16 +81,7 @@ export function AuthProvider({ children }) {
       if (!mounted) return;
       if (session?.user) {
         setUser(session.user);
-        const success = await loadUserData(session.user.id);
-        if (!mounted) return;
-        if (!success) {
-          // Session exists but profile doesn't — could be stale/deleted account
-          // Clear the session so user sees landing page
-          console.warn('Session exists but no profile found — signing out stale session');
-          await supabase.auth.signOut();
-          setUser(null);
-          setProfile(null);
-        }
+        await loadUserData(session.user.id);
       } else {
         setUser(null);
       }
