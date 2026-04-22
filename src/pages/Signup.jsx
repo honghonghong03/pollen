@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Eye, EyeOff, Check, X, AtSign } from 'lucide-react';
 
 export default function Signup() {
-  const { signup } = useAuth();
   const [form, setForm] = useState({ display_name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -55,20 +53,18 @@ export default function Signup() {
 
     setSubmitting(true);
     try {
-      const result = await signup({
+      const { error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        display_name: form.display_name,
-        username: form.username,
+        options: { data: { display_name: form.display_name, username: form.username } },
       });
-      if (result.error) {
-        setError(result.error);
+      if (authError) {
+        setError(authError.message);
         setSubmitting(false);
-      } else {
-        setTimeout(() => {
-          window.location.href = '/feed';
-        }, 300);
+        return;
       }
+      // Auth succeeded — hard redirect immediately
+      window.location.replace('/feed');
     } catch (err) {
       setError(err.message || 'Something went wrong');
       setSubmitting(false);

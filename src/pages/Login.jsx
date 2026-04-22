@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export default function Login() {
-  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,16 +13,14 @@ export default function Login() {
     setSubmitting(true);
     setError('');
     try {
-      const result = await login(email, password);
-      if (result.error) {
-        setError(result.error);
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setError(authError.message);
         setSubmitting(false);
-      } else {
-        // Small delay to let Supabase session settle, then hard redirect
-        setTimeout(() => {
-          window.location.href = '/feed';
-        }, 300);
+        return;
       }
+      // Auth succeeded — hard redirect immediately
+      window.location.replace('/feed');
     } catch (err) {
       setError(err.message || 'Something went wrong');
       setSubmitting(false);
